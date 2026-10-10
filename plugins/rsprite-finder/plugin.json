@@ -1,0 +1,10 @@
+{
+  "name": "rsprite-finder",
+  "version": "0.1.0",
+  "hasSettingsIcon": true,
+  "requiredDependencies": {
+    "prettyui": 6398181,
+    "rsprite": "rsprite"
+  },
+  "optionalDependencies": {}
+}
