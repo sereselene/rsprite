@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+    branches:
+      - main
+      - release/**
+  push:
+    branches:
+      - main
+      - release/**
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  LUACHECK_VERSION: "1.2.0"
+
+jobs:
+  lua:
+    name: Lua formatting and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install Luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes lua5.1 luarocks liblua5.1-0-dev
+          luarocks install --local luacheck "$LUACHECK_VERSION"
+          echo "$HOME/.luarocks/bin" >> "$GITHUB_PATH"
+
+      - name: Check Lua formatting (StyLua)
+        id: stylua-check
+        continue-on-error: true
+        run: npx stylua --config-path stylua.toml --check . 2>&1 | tee /tmp/stylua-output.txt
+
+      - name: Run Luacheck
+        id: luacheck-check
+        continue-on-error: true
+        run: luacheck --no-color --config .luacheckrc plugins examples tests 2>&1 | tee /tmp/luacheck-output.txt
+
+      - name: Write Lua checks summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "<!-- lua-checks-summary -->"
+            echo "### Lua formatting and lint"
+            echo ""
+            if [ "${{ steps.stylua-check.outcome }}" = "success" ]; then
+              echo "StyLua: passed"
+            else
+              echo "StyLua: failed. Run \`npm run format\` locally to fix it."
+              echo ""
+              echo '```diff'
+              head -n 200 /tmp/stylua-output.txt
+              echo '```'
+            fi
+            echo ""
+            if [ "${{ steps.luacheck-check.outcome }}" = "success" ]; then
+              echo "Luacheck: passed"
+            else
+              echo "Luacheck: failed"
+              echo ""
+              echo '```'
+              grep -E '^[[:space:]]+[^[:space:]]+:[0-9]+:[0-9]+: |^Total: ' /tmp/luacheck-output.txt | head -n 40
+              echo '```'
+            fi
+          } > /tmp/lua-summary.md
+          cat /tmp/lua-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment Lua checks summary on pull request
+        if: always() && github.event_name == 'pull_request'
+        uses: ./.github/actions/comment-checks-summary
+        with:
+          marker: "<!-- lua-checks-summary -->"
+          summary-file: /tmp/lua-summary.md
+          label: Lua
+
+      - name: Fail if Lua checks failed
+        run: |
+          if [ "${{ steps.stylua-check.outcome }}" = "failure" ] || [ "${{ steps.luacheck-check.outcome }}" = "failure" ]; then
+            exit 1
+          fi
+
+  tests:
+    name: Selftests and generator tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run the tests
+        run: npm test
+
+  catalogue:
+    name: Catalogue is up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Check the generated catalogue files
+        run: npm run catalogue -- --check

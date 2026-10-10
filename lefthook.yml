@@ -1,0 +1,19 @@
+commit-msg:
+  commands:
+    gitlint:
+      run: gitlint --msg-filename {1}
+
+pre-commit:
+  commands:
+    stylua:
+      glob: "*.lua"
+      run: npx stylua --config-path stylua.toml --check {staged_files}
+    luacheck:
+      glob: "*.lua"
+      run: luacheck --config .luacheckrc {staged_files}
+
+pre-push:
+  commands:
+    release-tag:
+      use_stdin: true
+      run: node scripts/validate-release-tag.mjs --pushed

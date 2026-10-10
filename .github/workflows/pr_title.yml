@@ -1,0 +1,117 @@
+name: PR title check
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+    branches:
+      - main
+      - release/**
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GITLINT_VERSION: "0.19.1"
+
+jobs:
+  validate:
+    name: Validate PR title format
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      type: ${{ steps.parse-type.outputs.type }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install gitlint
+        run: pip install "gitlint==${GITLINT_VERSION}"
+
+      - name: Write PR title to a synthetic commit message file
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" > /tmp/pr-title.txt
+
+      - name: Run gitlint against the PR title
+        id: gitlint
+        run: |
+          if gitlint --msg-filename /tmp/pr-title.txt > /tmp/gitlint-output.txt 2>&1; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report a clear failure message
+        if: steps.gitlint.outputs.passed == 'false'
+        run: |
+          {
+            echo "### PR title check failed"
+            echo ""
+            echo "The PR title does not match the required format."
+            echo ""
+            echo "Expected: \`type(scope): emoji description\`, optionally ending with \`#issue\`"
+            printf 'Example: \x60feat(core): \u2728 add a tag filter to Find\x60\n'
+            echo ""
+            echo "Allowed types, scopes, and emoji are defined in \`.gitlint-rules/type_scope_format.py\`."
+            echo ""
+            echo "Full gitlint output:"
+            echo ""
+            echo '```'
+            cat /tmp/gitlint-output.txt
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - name: Parse the commit type from the title
+        id: parse-type
+        if: steps.gitlint.outputs.passed == 'true'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          type=$(printf '%s\n' "$PR_TITLE" | sed -E 's/^([a-z]+)\(.*/\1/')
+          echo "type=$type" >> "$GITHUB_OUTPUT"
+
+  label:
+    name: Apply a type label
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Apply the matching type label to the pull request
+        uses: actions/github-script@v7
+        env:
+          COMMIT_TYPE: ${{ needs.validate.outputs.type }}
+        with:
+          script: |
+            const type = process.env.COMMIT_TYPE;
+            const label = `type: ${type}`;
+
+            try {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: [label],
+              });
+            } catch (error) {
+              core.warning(
+                `Could not apply label "${label}": ${error.message}. ` +
+                "Create this label in the repository first if it does not exist yet."
+              );
+            }

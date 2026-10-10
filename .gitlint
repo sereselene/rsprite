@@ -1,0 +1,6 @@
+[general]
+ignore=body-is-missing,body-max-line-length,title-match-regex
+extra-path=.gitlint-rules
+
+[title-max-length]
+line-length=100

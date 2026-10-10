@@ -1,0 +1,20 @@
+{
+  "runtime.version": "Lua 5.3",
+  "diagnostics.globals": [
+    "ui",
+    "id",
+    "Event",
+    "Plugin",
+    "PersistentDB",
+    "config",
+    "Vector4",
+    "PluginShutdown",
+    "rsprite",
+    "prettyui"
+  ],
+  "workspace.ignoreDir": [
+    "node_modules",
+    "dist",
+    "standalone"
+  ]
+}

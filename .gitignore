@@ -1,0 +1,5 @@
+/node_modules
+/dist
+/standalone
+__pycache__/
+*.pyc
