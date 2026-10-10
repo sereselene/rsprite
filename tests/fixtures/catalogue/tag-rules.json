@@ -1,0 +1,5 @@
+[
+  { "prefix": "ALPHA_", "tags": ["alpha"] },
+  { "suffix": "_ICON", "tags": ["icon"] },
+  { "contains": "BUTTON", "tags": ["button"] }
+]
