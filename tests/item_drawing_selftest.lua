@@ -65,10 +65,64 @@ for _, invalidId in ipairs(invalidIds) do
     )
 end
 
-client.ClearLog()
-rsprite.DrawItem(parent, nil)
+for _, placeholderSetting in ipairs({ true, false }) do
+    local label = "with placeholder " .. tostring(placeholderSetting)
+    local warningsBeforeNil = #client.warnings
+    client.ClearLog()
+    local empty = rsprite.DrawItem(parent, nil, { placeholder = placeholderSetting })
+    check.Check("DrawItem with nil still returns a sprite " .. label, empty ~= nil, tostring(empty))
+    check.Same("DrawItem with nil makes an empty hidden sprite " .. label, client.log, {
+        "SetPos 0 0 0 0",
+        "SetSize 24 24",
+        "clickthrough true",
+        "hidden true",
+    })
+    check.Equal(
+        "DrawItem with nil warns about nothing " .. label,
+        #client.warnings,
+        warningsBeforeNil
+    )
+
+    client.ClearLog()
+    local cleared = rsprite.SetItem(empty, nil, { placeholder = placeholderSetting })
+    check.Equal("SetItem with nil returns false " .. label, cleared, false)
+    check.Same("SetItem with nil clears the art and hides the sprite " .. label, client.log, {
+        "hidden true",
+        "SetAssociatedObject -1",
+    })
+    check.Equal(
+        "SetItem with nil warns about nothing " .. label,
+        #client.warnings,
+        warningsBeforeNil
+    )
+end
+
+local function lastWarning()
+    return client.warnings[#client.warnings]
+end
+
+local warningsBeforeWording = #client.warnings
+rsprite.DrawItem(parent, -7)
+check.Equal("an invalid id warns once", #client.warnings, warningsBeforeWording + 1)
 check.Equal(
-    "a nil id makes no SetAssociatedObject call",
+    "the warning says the placeholder is shown when it is",
+    lastWarning(),
+    "rsprite: item id -7 is not a whole number 0 or above, so the placeholder is shown instead"
+)
+client.ClearLog()
+rsprite.DrawItem(parent, -8, { placeholder = false })
+check.Equal(
+    "the warning says nothing is shown when the placeholder is off",
+    lastWarning(),
+    "rsprite: item id -8 is not a whole number 0 or above, so nothing is shown"
+)
+check.Equal(
+    "an invalid id with the placeholder off stays hidden",
+    client.log[#client.log],
+    "hidden true"
+)
+check.Equal(
+    "an invalid id with the placeholder off makes no SetAssociatedObject call",
     countEntries(client.log, "SetAssociatedObject"),
     0
 )
@@ -117,6 +171,98 @@ check.Equal(
     client.log[#client.log],
     "hidden true"
 )
+
+local itemSprite = rsprite.DrawItem(parent, ClientFakes.ITEM_ID)
+client.ClearLog()
+rsprite.SetSource(itemSprite, "SKILL_ATTACK")
+check.Same(
+    "SetSource on an item sprite hides it, clears the item art, then draws the source",
+    client.log,
+    {
+        "hidden true",
+        "SetAssociatedObject -1",
+        "associatedObjectQuantityMode NEVER",
+        "sprite 9318",
+        "hidden false",
+    }
+)
+client.ClearLog()
+rsprite.SetSource(itemSprite, "SKILL_MAGIC")
+check.Same("a second SetSource has no item art left to clear", client.log, {
+    "sprite 33454",
+    "hidden false",
+})
+
+local countedSprite = rsprite.DrawItem(parent, ClientFakes.ITEM_ID, { quantity = 5 })
+client.ClearLog()
+rsprite.SetSource(countedSprite, "SKILL_ATTACK")
+check.Same("SetSource on an item sprite with a quantity clears the quantity mode too", client.log, {
+    "hidden true",
+    "SetAssociatedObject -1",
+    "associatedObjectQuantityMode NEVER",
+    "sprite 9318",
+    "hidden false",
+})
+
+local emptiedSprite = rsprite.DrawItem(parent, ClientFakes.ITEM_ID)
+rsprite.SetItem(emptiedSprite, nil)
+client.ClearLog()
+rsprite.SetSource(emptiedSprite, "SKILL_ATTACK")
+check.Same("SetSource after SetItem with nil makes no clearing calls", client.log, {
+    "sprite 9318",
+    "hidden false",
+})
+
+local placeholderSprite = rsprite.DrawItem(parent, ClientFakes.ITEM_ID)
+rsprite.SetItem(placeholderSprite, -9)
+client.ClearLog()
+rsprite.SetSource(placeholderSprite, "SKILL_ATTACK")
+check.Same("SetSource after an invalid SetItem makes no clearing calls", client.log, {
+    "sprite 9318",
+    "hidden false",
+})
+
+local plainSprite = rsprite.Draw(parent, "SKILL_ATTACK")
+client.ClearLog()
+rsprite.SetSource(plainSprite, "SKILL_MAGIC")
+check.Same("SetSource on a plain sprite makes no extra calls", client.log, {
+    "sprite 33454",
+    "hidden false",
+})
+
+local drawnSprite = rsprite.Draw(parent, "SKILL_ATTACK")
+client.ClearLog()
+rsprite.SetItem(drawnSprite, ClientFakes.ITEM_ID)
+check.Same("SetItem on a drawn sprite makes no clearing calls", client.log, {
+    "hidden true",
+    "SetAssociatedObject 13562",
+    "associatedObjectQuantityMode NEVER",
+    "hidden false",
+})
+
+for _, layoutProblem in ipairs({
+    { options = { size = 0 }, message = "rsprite.DrawItem: option size must be above 0, got 0" },
+    {
+        options = { height = 0 / 0 },
+        message = "rsprite.DrawItem: option height must be a finite number, got nan",
+    },
+    {
+        options = { x = 0 / 0 },
+        message = "rsprite.DrawItem: option x must be a finite number, got nan",
+    },
+    {
+        options = { yAnchor = math.huge },
+        message = "rsprite.DrawItem: option yAnchor must be a finite number, got inf",
+    },
+}) do
+    check.Raises(layoutProblem.message, function()
+        rsprite.DrawItem(parent, ClientFakes.ITEM_ID, layoutProblem.options)
+    end, layoutProblem.message, SOURCE)
+end
+
+client.ClearLog()
+rsprite.DrawItem(parent, ClientFakes.ITEM_ID, { size = 12.5 })
+check.Equal("a fractional item size is allowed", client.log[2], "SetSize 12.5 12.5")
 
 check.Raises("a nil parent raises", function()
     rsprite.DrawItem(nil, ClientFakes.ITEM_ID)

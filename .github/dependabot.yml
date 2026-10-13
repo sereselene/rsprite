@@ -1,0 +1,30 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-type: development
+    ignore:
+      - dependency-name: "@johnnymorganz/stylua-bin"
+    groups:
+      development-dependencies:
+        dependency-type: development
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "build(tooling): \U0001F4E6"
+      prefix-development: "build(tooling): \U0001F4E6"
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/comment-checks-summary
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci(ci): \U0001F477"

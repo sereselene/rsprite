@@ -134,6 +134,63 @@ check.Check("Find searched the whole index", total > 0, total)
 check.Equal("Find left the index ready", app.Public.IsIndexReady(), true)
 check.Equal("Find built it without subscribing", client.SubscriptionCount(), 0)
 
+client, app = freshIndex()
+local goodCalls = 0
+local failingCalls = 0
+local function failingCallback()
+    failingCalls = failingCalls + 1
+    error("the consumer broke")
+end
+app.Public.BuildIndex(failingCallback)
+app.Public.BuildIndex(function()
+    goodCalls = goodCalls + 1
+end)
+for _ = 1, 10 do
+    client.FireLogic()
+end
+check.Equal("a failing callback is called once", failingCalls, 1)
+check.Equal("a failing callback does not stop the next one", goodCalls, 1)
+check.Equal("a failing callback does not stop the index finishing", app.Public.IsIndexReady(), true)
+check.Equal(
+    "a failing callback is reported once",
+    client.WarningsMentioning("rsprite.BuildIndex"),
+    1
+)
+check.Check(
+    "the warning says the BuildIndex callback raised and was skipped",
+    client.WarningsMentioning(
+        "the function passed to rsprite.BuildIndex raised an error and was skipped"
+    ) == 1,
+    client.warnings[#client.warnings]
+)
+check.Equal(
+    "the warning includes the error text",
+    client.WarningsMentioning("the consumer broke"),
+    1
+)
+
+app.Public.BuildIndex(failingCallback)
+check.Equal("a callback that failed is never called again", failingCalls, 1)
+check.Equal(
+    "skipping it again prints nothing new",
+    client.WarningsMentioning("rsprite.BuildIndex"),
+    1
+)
+
+app.Public.BuildIndex(function()
+    error("a different problem")
+end)
+check.Equal(
+    "a different failure is reported too",
+    client.WarningsMentioning("rsprite.BuildIndex"),
+    2
+)
+check.Equal(
+    "the second warning carries its own error text",
+    client.WarningsMentioning("a different problem"),
+    1
+)
+
 check.Raises("a non-function onReady raises", function()
     app.Public.BuildIndex("soon")
 end, "rsprite.BuildIndex: onReady must be a function, got string", SOURCE)

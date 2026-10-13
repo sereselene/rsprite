@@ -13,6 +13,7 @@ local SUBSCRIPTION_KEY = "rsprite:name-index"
 local entries = nil
 local walk = nil
 local readyCallbacks = {}
+local failedCallbacks = setmetatable({}, { __mode = "k" })
 local subscribed = false
 
 local function newWalk()
@@ -55,10 +56,18 @@ local function stopTicking()
 end
 
 local function notify(callback)
-    Warnings.IfFailed(
-        "index ready callback",
-        "an onReady callback",
-        pcall(callback, #entries.names)
+    if failedCallbacks[callback] then
+        return
+    end
+    local succeeded, failure = pcall(callback, #entries.names)
+    if succeeded then
+        return
+    end
+    failedCallbacks[callback] = true
+    local errorText = tostring(failure)
+    Warnings.Once(
+        "index ready callback " .. errorText,
+        "the function passed to rsprite.BuildIndex raised an error and was skipped: " .. errorText
     )
 end
 

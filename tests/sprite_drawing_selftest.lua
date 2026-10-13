@@ -41,6 +41,95 @@ check.Same("placeholder false leaves it hidden", client.log, {
     "hidden true",
 })
 
+for _, emptyCase in ipairs({
+    { chain = {}, name = "an empty chain" },
+    { chain = { nil, "SKILL_ATTACK" }, name = "a chain starting with nil" },
+}) do
+    local emptyChain = emptyCase.chain
+    local drawn = rsprite.Draw(parent, emptyChain)
+    check.Check(emptyCase.name .. " still returns a sprite", drawn ~= nil, tostring(drawn))
+
+    client.ClearLog()
+    local _, emptyIndex = rsprite.Draw(parent, emptyChain)
+    check.Equal(emptyCase.name .. " gives a nil index", emptyIndex, nil)
+    check.Same(emptyCase.name .. " shows the placeholder through Draw", client.log, {
+        "SetPos 0 0 0 0",
+        "SetSize 24 24",
+        "clickthrough true",
+        "sprite handle:placeholder",
+        "hidden false",
+    })
+
+    client.ClearLog()
+    rsprite.Draw(parent, emptyChain, { placeholder = false })
+    check.Same(emptyCase.name .. " draws nothing through Draw with placeholder false", client.log, {
+        "SetPos 0 0 0 0",
+        "SetSize 24 24",
+        "clickthrough true",
+        "hidden true",
+    })
+
+    client.ClearLog()
+    rsprite.SetSource(drawn, emptyChain)
+    check.Same(emptyCase.name .. " shows the placeholder through SetSource", client.log, {
+        "sprite handle:placeholder",
+        "hidden false",
+    })
+
+    client.ClearLog()
+    rsprite.SetSource(drawn, emptyChain, { placeholder = false })
+    check.Same(
+        emptyCase.name .. " draws nothing through SetSource with placeholder false",
+        client.log,
+        { "hidden true" }
+    )
+end
+
+local layoutProblems = {
+    { options = { size = 0 }, message = "rsprite.Draw: option size must be above 0, got 0" },
+    { options = { width = -5 }, message = "rsprite.Draw: option width must be above 0, got -5" },
+    { options = { height = 0 }, message = "rsprite.Draw: option height must be above 0, got 0" },
+    {
+        options = { size = 0 / 0 },
+        message = "rsprite.Draw: option size must be a finite number, got nan",
+    },
+    {
+        options = { size = math.huge },
+        message = "rsprite.Draw: option size must be a finite number, got inf",
+    },
+    {
+        options = { width = -math.huge },
+        message = "rsprite.Draw: option width must be a finite number, got -inf",
+    },
+    {
+        options = { x = 0 / 0 },
+        message = "rsprite.Draw: option x must be a finite number, got nan",
+    },
+    {
+        options = { yAnchor = math.huge },
+        message = "rsprite.Draw: option yAnchor must be a finite number, got inf",
+    },
+}
+for _, layoutProblem in ipairs(layoutProblems) do
+    check.Raises(layoutProblem.message, function()
+        rsprite.Draw(parent, "SKILL_ATTACK", layoutProblem.options)
+    end, layoutProblem.message, SOURCE)
+end
+
+client.ClearLog()
+rsprite.Draw(
+    parent,
+    "SKILL_ATTACK",
+    { size = 0.5, x = -20, y = -4, xAnchor = 1.5, yAnchor = -0.25 }
+)
+check.Same("fractions, negative positions and anchors outside 0 to 1 are allowed", client.log, {
+    "SetPos -20 -4 1.5 -0.25",
+    "SetSize 0.5 0.5",
+    "clickthrough true",
+    "sprite 9318",
+    "hidden false",
+})
+
 local colour = 0x11223344
 client.ClearLog()
 rsprite.Draw(parent, "SKILL_MAGIC", {
