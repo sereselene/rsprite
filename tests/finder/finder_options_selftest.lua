@@ -1,25 +1,22 @@
 selftest.UsePlugin("rsprite-finder")
 
-local ClientFakes = require("tests/support/client_fakes")
 local FinderFakes = require("tests/support/finder_fakes")
 local Report = require("tests/support/report")
 
 local check = Report.New("finder options")
-local sprites = ClientFakes.DefaultSprites()
-for position, name in ipairs({
-    "ATTACKING_RETICULE_FRAME_2",
-    "ATTACKING_RETICULE_FRAME_1",
-    "ATTACKING_RETICULE_FRAME_3",
-    "EMOTES_10",
-    "EMOTES_2",
-    "MENU_MOBILE_PANEL",
-    "LOBBY_BANNER_FR",
-    "LOBBY_BANNER_DE",
-    "LOBBY_BANNER_EN",
-}) do
-    sprites[#sprites + 1] = { 36699 + position, name }
-end
-local client, prettyuiFake = FinderFakes.Install({ sprites = sprites })
+local client, prettyuiFake = FinderFakes.Install({
+    sprites = FinderFakes.SpritesWith({
+        "ATTACKING_RETICULE_FRAME_2",
+        "ATTACKING_RETICULE_FRAME_1",
+        "ATTACKING_RETICULE_FRAME_3",
+        "EMOTES_10",
+        "EMOTES_2",
+        "MENU_MOBILE_PANEL",
+        "LOBBY_BANNER_FR",
+        "LOBBY_BANNER_DE",
+        "LOBBY_BANNER_EN",
+    }),
+})
 local App = require("src/app/init")
 local FinderOptions = require("src/features/finder/finder_options")
 local FinderWindow = require("src/features/finder/finder_window")
@@ -32,19 +29,12 @@ rsprite.Find = function(...)
     return find(...)
 end
 
-local function dialog()
-    local component = client.NewComponent("settings dialog")
-    component.width = 556
-    component.height = 300
-    return component
-end
-
 local function latestGroup()
     return prettyuiFake.checkboxGroups[#prettyuiFake.checkboxGroups]
 end
 
 App.Start()
-client.FireEvent("SettingsLayerReady", { component = dialog() })
+client.FireEvent("SettingsLayerReady", { component = FinderFakes.SettingsDialog(client) })
 local group = latestGroup()
 check.Equal("the cog shows one group of options", #prettyuiFake.checkboxGroups, 1)
 check.Equal("the options sit in the settings view", group.parent, prettyuiFake.views[1].content)
@@ -214,7 +204,7 @@ check.Equal(
     false
 )
 
-client.FireEvent("SettingsLayerReady", { component = dialog() })
+client.FireEvent("SettingsLayerReady", { component = FinderFakes.SettingsDialog(client) })
 group = latestGroup()
 local searchesBefore = findCalls
 group:Toggle(FinderOptions.GROUP_VARIANTS)
@@ -247,7 +237,7 @@ check.Equal(
 )
 check.Equal("the fallback returns to the first page", finder.pageText.content, "Page 1 of 6")
 
-client.FireEvent("SettingsLayerReady", { component = dialog() })
+client.FireEvent("SettingsLayerReady", { component = FinderFakes.SettingsDialog(client) })
 check.Equal("the cog rebuilds its options", #prettyuiFake.checkboxGroups, 3)
 check.Same(
     "the rebuilt options show the saved choices",

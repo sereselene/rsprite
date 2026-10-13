@@ -22,6 +22,7 @@ function PrettyuiFake.Install()
         tooltips = {},
         checkboxGroups = {},
         raiseOnContent = false,
+        raiseOnWindow = false,
     }
 
     local function record(...)
@@ -82,9 +83,6 @@ function PrettyuiFake.Install()
                     end
                     return values
                 end
-                function group.IsSelected(_, value)
-                    return group.selected[value] == true
-                end
                 function group.Toggle(_, value)
                     group.selected[value] = not group.selected[value]
                     if group.options.onChange ~= nil then
@@ -111,6 +109,9 @@ function PrettyuiFake.Install()
     prettyui.Window = {
         new = function(parent, options)
             record("Window.new", options.title)
+            if fake.raiseOnWindow then
+                error("the window could not be created")
+            end
             local content = ui.Layer.new(parent)
             local window = setmetatable({
                 parent = parent,
@@ -150,22 +151,7 @@ function PrettyuiFake.Install()
     prettyui.TextField = {
         new = function(parent, options)
             record("TextField.new", options.placeholder or "")
-            local field = { parent = parent, options = options, text = options.text or "" }
-            function field:GetText()
-                return self.text
-            end
-            function field:SetText(text, notify)
-                self.text = text
-                if notify ~= false and options.onChange ~= nil then
-                    options.onChange(self, "set", text)
-                end
-            end
-            function field:Type(text)
-                self.text = text
-                if options.onChange ~= nil then
-                    options.onChange(self, "typed", text)
-                end
-            end
+            local field = { parent = parent, options = options }
             fake.textFields[#fake.textFields + 1] = field
             return field
         end,
@@ -174,21 +160,7 @@ function PrettyuiFake.Install()
     prettyui.ComboBox = {
         new = function(parent, options)
             record("ComboBox.new", #options.entries)
-            local combo = { parent = parent, options = options, selectedID = options.selectedID }
-            function combo:Select(entryId)
-                record("ComboBox.Select", entryId)
-                self.selectedID = entryId
-            end
-            function combo:Choose(label)
-                for _, entry in ipairs(options.entries) do
-                    if entry.label == label then
-                        self.selectedID = entry.id
-                        options.onChange(self, entry.id, entry.label, "select")
-                        return true
-                    end
-                end
-                return false
-            end
+            local combo = { parent = parent, options = options }
             fake.comboBoxes[#fake.comboBoxes + 1] = combo
             return combo
         end,
@@ -198,16 +170,7 @@ function PrettyuiFake.Install()
         new = function(parent, content, action, options)
             record("SimpleButton.new", content)
             local button =
-                { parent = parent, content = content, options = options or {}, active = false }
-            function button:SetActive(active)
-                self.active = active
-            end
-            function button:Click()
-                if self.options.toggleable then
-                    self.active = not self.active
-                end
-                action(self, self.active)
-            end
+                { parent = parent, content = content, action = action, options = options or {} }
             fake.simpleButtons[#fake.simpleButtons + 1] = button
             return button
         end,

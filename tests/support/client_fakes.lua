@@ -99,6 +99,8 @@ function ClientFakes.Install(options)
         fromIdCalls = 0,
         raiseOnLookup = false,
         raiseOnFromId = false,
+        raiseOnFromIdFor = {},
+        raiseOnEventSubscribe = false,
         raiseOnAssociate = false,
         raiseOnClear = false,
         raiseOnSetEntries = false,
@@ -132,10 +134,10 @@ function ClientFakes.Install(options)
             if type(value) ~= "number" then
                 error("FromID expects a number")
             end
-            if client.raiseOnFromId then
+            local whole = value >= 0 and math.floor(value) or math.ceil(value)
+            if client.raiseOnFromId or client.raiseOnFromIdFor[whole] then
                 error("FromID failed")
             end
-            local whole = value >= 0 and math.floor(value) or math.ceil(value)
             return nameById[whole]
         end,
     })
@@ -411,6 +413,9 @@ function ClientFakes.Install(options)
         client.handlers[eventName] = {}
         return {
             Subscribe = function(key, callback)
+                if client.raiseOnEventSubscribe then
+                    error("cannot subscribe to " .. eventName)
+                end
                 client.handlers[eventName][key] = callback
             end,
             Unsubscribe = function(key)
@@ -439,6 +444,16 @@ function ClientFakes.Install(options)
 
     function client.NewComponent(kind)
         return newComponent(kind, nil)
+    end
+
+    function client.Logged(prefix)
+        local count = 0
+        for _, line in ipairs(client.log) do
+            if string.sub(line, 1, #prefix) == prefix then
+                count = count + 1
+            end
+        end
+        return count
     end
 
     function client.ClearLog()

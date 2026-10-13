@@ -8,13 +8,6 @@ local client, prettyuiFake = FinderFakes.Install()
 local App = require("src/app/init")
 local SettingsView = require("src/features/settings/settings_view")
 
-local function dialog()
-    local component = client.NewComponent("settings dialog")
-    component.width = 556
-    component.height = 300
-    return component
-end
-
 App.Start()
 check.Check(
     "the cog is listened for",
@@ -22,7 +15,7 @@ check.Check(
     "subscribed"
 )
 
-client.FireEvent("SettingsLayerReady", { component = dialog() })
+client.FireEvent("SettingsLayerReady", { component = FinderFakes.SettingsDialog(client) })
 local firstView = prettyuiFake.views[1]
 check.Check(
     "the first opening builds a view",
@@ -43,7 +36,7 @@ check.Equal(
 )
 
 prettyuiFake.log = {}
-client.FireEvent("SettingsLayerReady", { component = dialog() })
+client.FireEvent("SettingsLayerReady", { component = FinderFakes.SettingsDialog(client) })
 check.Same(
     "a second opening destroys the previous view before building a new one",
     { prettyuiFake.log[1], prettyuiFake.log[2] },

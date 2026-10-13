@@ -4,7 +4,9 @@ local FinderFakes = require("tests/support/finder_fakes")
 local Report = require("tests/support/report")
 
 local check = Report.New("finder window")
-local client, prettyuiFake = FinderFakes.Install()
+local client, prettyuiFake = FinderFakes.Install({
+    sprites = FinderFakes.SpritesWith({ "RS3_ICON_CLEAR_16PX_0", "RS3_ICON_CLEAR_16PX_1" }),
+})
 local DetailPanel = require("src/features/finder/detail_panel")
 local FinderOptions = require("src/features/finder/finder_options")
 local FinderWindow = require("src/features/finder/finder_window")
@@ -22,12 +24,6 @@ local function clickSize(finder, size)
     client.Click(sizeButton(finder, size).root)
 end
 
-local function clearButton()
-    return prettyuiFake.Find("fancyButtons", function(button)
-        return button.text == FinderWindow.CLEAR_LABEL and not button.destroyed
-    end)
-end
-
 check.Equal("opening reports success", FinderWindow.Open(), true)
 local finder, state = FinderWindow.Parts()
 check.Equal("the window is titled", prettyuiFake.Logged("Window.new rsprite finder"), 1)
@@ -41,7 +37,7 @@ FinderFakes.TicksUntil(client, function()
 end, 40)
 check.Equal("the spinner goes when the names are ready", prettyuiFake.Logged("Spinner.Destroy"), 1)
 check.Equal("the loading line goes", finder.loadingText.hidden, true)
-check.Equal("browsing shows the total", finder.resultsText.content, "153 sprites")
+check.Equal("browsing shows the total", finder.resultsText.content, "154 sprites")
 check.Equal("the window keeps its width", FinderWindow.WIDTH, 724)
 check.Equal("the window height fits its content", FinderWindow.HEIGHT, 514)
 check.Equal(
@@ -144,7 +140,7 @@ FinderFakes.Type(client, finder.searchField, "skill")
 for _ = 1, FinderWindow.DEBOUNCE_TICKS - 1 do
     client.FireLogic()
 end
-check.Equal("typing waits for a pause", finder.resultsText.content, "153 sprites")
+check.Equal("typing waits for a pause", finder.resultsText.content, "154 sprites")
 client.FireLogic()
 check.Equal("the search runs after 5 quiet ticks", finder.resultsText.content, "4 matches")
 check.Equal("a short search fits one page", finder.pageText.content, "Page 1 of 1")
@@ -371,10 +367,14 @@ FinderFakes.Choose(client, finder.tagBox, "icon")
 check.Equal("a tag with no matches empties the results", finder.resultsText.content, "0 matches")
 check.Equal("the empty message shows", finder.emptyTitle.hidden, false)
 check.Equal("the empty hint shows", finder.emptyHint.hidden, false)
-check.Check("the clear filters button appears", clearButton() ~= nil, "shown")
+check.Check(
+    "the clear filters button appears",
+    FinderFakes.LiveFancyButton(prettyuiFake, FinderWindow.CLEAR_LABEL) ~= nil,
+    "shown"
+)
 check.Equal("the empty state hides the tiles", finder.grid.tiles[1].square.hidden, true)
 
-clearButton():Click()
+FinderFakes.LiveFancyButton(prettyuiFake, FinderWindow.CLEAR_LABEL):Click()
 check.Equal("clearing filters empties the query", state.query, "")
 check.Equal("clearing filters resets the tag", state.tag, nil)
 check.Equal("clearing filters empties the search field", finder.searchField.component.content, "")
@@ -383,9 +383,13 @@ check.Equal(
     tagBox.selectedID,
     finder.tagOptions.positionByLabel[FinderWindow.ALL_TAGS]
 )
-check.Equal("clearing filters shows everything", finder.resultsText.content, "153 sprites")
+check.Equal("clearing filters shows everything", finder.resultsText.content, "154 sprites")
 check.Equal("clearing filters hides the clear cross", finder.searchField.clearButton.visible, false)
-check.Equal("the clear button goes away", clearButton(), nil)
+check.Equal(
+    "the clear button goes away",
+    FinderFakes.LiveFancyButton(prettyuiFake, FinderWindow.CLEAR_LABEL),
+    nil
+)
 check.Equal("the empty message hides", finder.emptyTitle.hidden, true)
 
 local cross = finder.searchField.clearButton
@@ -421,11 +425,7 @@ local findsBefore = client.stored.rsprite_finder_state.query
 check.Equal("the typed query is saved", findsBefore, "attack")
 local optionsBefore = { FinderOptions.Current().groupVariants, FinderOptions.Current().hideClutter }
 client.Fire(cross.root, "ONMOUSEOVER", 0, 0)
-check.Equal(
-    "hovering the cross lights it",
-    cross.image.spriteID,
-    rsprite.Get("RS3_ICON_CLEAR_16PX_1") or -1
-)
+check.Equal("hovering the cross lights it", cross.image.spriteID, 36701)
 client.Click(cross.root)
 check.Equal("clearing empties the box", searchBox.content, "")
 check.Equal("clearing hides the cross", cross.visible, false)
@@ -438,11 +438,7 @@ check.Same(
     { FinderOptions.Current().groupVariants, FinderOptions.Current().hideClutter },
     optionsBefore
 )
-check.Equal(
-    "the cross rests again once hidden",
-    cross.image.spriteID,
-    rsprite.Get("RS3_ICON_CLEAR_16PX_0") or -1
-)
+check.Equal("the cross rests again once hidden", cross.image.spriteID, 36700)
 FinderFakes.Type(client, finder.searchField, "pending")
 client.Click(cross.root)
 for _ = 1, FinderWindow.DEBOUNCE_TICKS + 1 do
@@ -453,7 +449,7 @@ FinderWindow.ClearFilters()
 
 FinderFakes.Type(client, finder.searchField, "zzqqxxnothing")
 FinderFakes.TicksUntil(client, function()
-    return finder.resultsText.content ~= "153 sprites"
+    return finder.resultsText.content ~= "154 sprites"
 end, 10)
 check.Equal("a nonsense word finds nothing", finder.resultsText.content, "0 matches")
 FinderWindow.ClearFilters()
@@ -461,7 +457,7 @@ FinderWindow.ClearFilters()
 FinderFakes.Choose(client, finder.tagBox, "skill")
 check.Equal("a tag filters the results", finder.resultsText.content, "4 matches")
 FinderFakes.Choose(client, finder.tagBox, FinderWindow.ALL_TAGS)
-check.Equal("All tags lifts the filter", finder.resultsText.content, "153 sprites")
+check.Equal("All tags lifts the filter", finder.resultsText.content, "154 sprites")
 
 for _ = 1, 5 do
     finder.nextButton:Click()
@@ -562,5 +558,62 @@ check.Check(
     "rebuilt"
 )
 check.Equal("the rebuilt finder is open", ReloadedWindow.IsOpen(), true)
+ReloadedWindow.Destroy()
+
+local windowsBeforeCreation = #prettyuiFake.windows
+prettyuiFake.raiseOnWindow = true
+check.Equal("a window that cannot be created reports failure", ReloadedWindow.Open(), false)
+ReloadedWindow.Open()
+check.Equal(
+    "a window that cannot be created warns once",
+    client.WarningsMentioning("rsprite-finder: creating the finder window failed"),
+    1
+)
+check.Equal("a window that cannot be created leaves no finder", (ReloadedWindow.Parts()), nil)
+check.Equal("a window that cannot be created is not open", ReloadedWindow.IsOpen(), false)
+check.Equal(
+    "a window that cannot be created is not kept",
+    #prettyuiFake.windows,
+    windowsBeforeCreation
+)
+prettyuiFake.raiseOnWindow = false
+check.Equal("opening once the window can be created succeeds", ReloadedWindow.Open(), true)
+check.Equal("the recovered finder is open", ReloadedWindow.IsOpen(), true)
+
+local recovered, recoveredState = ReloadedWindow.Parts()
+local workingStorage = PersistentDB
+PersistentDB = {
+    GetStructuredData = workingStorage.GetStructuredData,
+    SetStructuredData = function()
+        error("storage is full")
+    end,
+}
+for _, query in ipairs({ "magic", "attack" }) do
+    FinderFakes.Type(client, recovered.searchField, query)
+    FinderFakes.TicksUntil(client, function()
+        return recoveredState.query == query
+    end, 10)
+end
+check.Equal("searching carries on while saves fail", recovered.resultsText.content, "1 match")
+check.Equal(
+    "the selection follows the search while saves fail",
+    recoveredState.selectedName,
+    "SKILL_ATTACK"
+)
+check.Equal(
+    "saves that keep failing warn once",
+    client.WarningsMentioning("rsprite-finder: saving the state settings failed"),
+    1
+)
+PersistentDB = workingStorage
+FinderFakes.Type(client, recovered.searchField, "herblore")
+FinderFakes.TicksUntil(client, function()
+    return recoveredState.query == "herblore"
+end, 10)
+check.Equal(
+    "saving works again once storage recovers",
+    client.stored.rsprite_finder_state.query,
+    "herblore"
+)
 ReloadedWindow.Destroy()
 check.Finish()

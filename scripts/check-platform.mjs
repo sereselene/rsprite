@@ -2,12 +2,26 @@ import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const nodeModules = join(repositoryRoot, "node_modules");
+const defaultRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const LEFTHOOK_SYSTEM_NAMES = { win32: "windows", linux: "linux", darwin: "darwin", freebsd: "freebsd", openbsd: "openbsd" };
 const SIDE_NAMES = { win32: "Windows", linux: "Linux or WSL", darwin: "macOS" };
 
+const parseRoot = (argv) => {
+    let root = defaultRoot;
+    for (let index = 0; index < argv.length; index += 1) {
+        if (argv[index] === "--root") {
+            root = resolve(argv[index + 1] ?? ".");
+            index += 1;
+        } else {
+            console.error(`check-platform: Unknown argument ${argv[index]}. Use --root <folder> to check another checkout.`);
+            process.exit(1);
+        }
+    }
+    return root;
+};
+
+const nodeModules = join(parseRoot(process.argv.slice(2)), "node_modules");
 const platform = process.platform;
 const architecture = process.arch;
 const side = SIDE_NAMES[platform] ?? platform;

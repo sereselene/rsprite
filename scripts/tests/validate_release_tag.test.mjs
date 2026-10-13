@@ -106,3 +106,60 @@ describe("validate-release-tag", () => {
         assert.doesNotMatch(run.stderr, /\n\s+at /);
     });
 });
+
+const LOCAL_SHA = "1111111111111111111111111111111111111111";
+const DELETED_SHA = "0000000000000000000000000000000000000000";
+
+const pushLine = (localReference, localSha = LOCAL_SHA) => `${localReference} ${localSha} ${localReference} ${DELETED_SHA}`;
+
+const runPushed = (root, lines, existingTags = "") =>
+    spawnSync(process.execPath, [validator, "--pushed", "--root", root, "--existing-tags", existingTags], {
+        encoding: "utf8",
+        input: lines.map((line) => `${line}\n`).join(""),
+    });
+
+describe("validate-release-tag --pushed", () => {
+    test("checks a pushed tag read from the hook's input", () => {
+        const root = newWorkspace({ changelog: changelogWith("## [0.1.0] - 2026-10-10") });
+        const run = runPushed(root, [pushLine("refs/tags/v0.1.0")]);
+        assert.equal(run.status, 0, run.stderr);
+        assert.match(run.stdout, /validate-release-tag: v0\.1\.0 matches/);
+    });
+
+    test("refuses a pushed tag that does not match, with its message", () => {
+        const root = newWorkspace({ changelog: changelogWith("## [0.1.0] - 2026-10-10") });
+        const run = runPushed(root, [pushLine("refs/tags/v0.2.0")]);
+        assert.equal(run.status, 1);
+        assert.match(run.stderr, /^validate-release-tag: plugins\/rsprite\/plugin\.json says version 0\.1\.0, not 0\.2\.0/);
+    });
+
+    test("skips a tag that is being deleted", () => {
+        const root = newWorkspace({ changelog: changelogWith("## [0.1.0] - 2026-10-10") });
+        const run = runPushed(root, [pushLine("refs/tags/v9.9.9", DELETED_SHA)]);
+        assert.equal(run.status, 0, run.stderr);
+        assert.equal(run.stdout, "");
+    });
+
+    test("ignores branches pushed alongside", () => {
+        const root = newWorkspace({ changelog: changelogWith("## [0.1.0] - 2026-10-10") });
+        const run = runPushed(root, [pushLine("refs/heads/main"), pushLine("refs/heads/v9.9.9")]);
+        assert.equal(run.status, 0, run.stderr);
+        assert.equal(run.stdout, "");
+    });
+
+    test("checks every pushed tag and stops at the first that fails", () => {
+        const root = newWorkspace({ changelog: changelogWith("## [0.1.0] - 2026-10-10") });
+        const run = runPushed(root, [pushLine("refs/heads/main"), pushLine("refs/tags/v0.1.0"), pushLine("refs/tags/v0.3.0")]);
+        assert.equal(run.status, 1);
+        assert.match(run.stdout, /v0\.1\.0 matches/);
+        assert.match(run.stderr, /not 0\.3\.0/);
+    });
+
+    test("does nothing for a push with no input", () => {
+        const root = newWorkspace({ changelog: changelogWith("## [0.1.0] - Unreleased") });
+        const run = runPushed(root, []);
+        assert.equal(run.status, 0, run.stderr);
+        assert.equal(run.stdout, "");
+        assert.equal(run.stderr, "");
+    });
+});

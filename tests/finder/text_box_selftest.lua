@@ -1,14 +1,12 @@
 selftest.UsePlugin("rsprite-finder")
 
-local ClientFakes = require("tests/support/client_fakes")
 local FinderFakes = require("tests/support/finder_fakes")
 local Report = require("tests/support/report")
 
 local check = Report.New("text box")
-local sprites = ClientFakes.DefaultSprites()
-sprites[#sprites + 1] = { 36700, "RS3_ICON_CLEAR_16PX_0" }
-sprites[#sprites + 1] = { 36701, "RS3_ICON_CLEAR_16PX_1" }
-local client = FinderFakes.Install({ sprites = sprites })
+local client = FinderFakes.Install({
+    sprites = FinderFakes.SpritesWith({ "RS3_ICON_CLEAR_16PX_0", "RS3_ICON_CLEAR_16PX_1" }),
+})
 local TextBox = require("src/components/text_box")
 local Theme = require("src/utils/theme")
 

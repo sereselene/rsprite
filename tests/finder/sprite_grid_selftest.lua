@@ -13,16 +13,6 @@ local function pageOf(offset)
     return ResultList.Build(entries, {}).tiles, total
 end
 
-local function countLog(prefix)
-    local count = 0
-    for _, line in ipairs(client.log) do
-        if string.sub(line, 1, #prefix) == prefix then
-            count = count + 1
-        end
-    end
-    return count
-end
-
 local parent = client.NewComponent("layer")
 local spritesBefore = #client.sprites
 local textsBefore = #client.ComponentsOfKind("text")
@@ -65,7 +55,7 @@ check.Equal(
     componentsAfterFirstPage
 )
 check.Equal("a page change creates no tooltips", #prettyuiFake.tooltips, 30)
-check.Equal("a page change destroys no sprites", countLog("Destroy"), 0)
+check.Equal("a page change destroys no sprites", client.Logged("Destroy"), 0)
 check.Equal(
     "a page change destroys no other components",
     client.destroyedComponents,

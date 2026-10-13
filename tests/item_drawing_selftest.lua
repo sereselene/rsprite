@@ -10,16 +10,6 @@ local client = ClientFakes.Install()
 local rsprite = ClientFakes.LoadRsprite().Public
 local parent = client.NewComponent("layer")
 
-local function countEntries(log, prefix)
-    local count = 0
-    for _, line in ipairs(log) do
-        if string.sub(line, 1, #prefix) == prefix then
-            count = count + 1
-        end
-    end
-    return count
-end
-
 client.ClearLog()
 local sprite = rsprite.DrawItem(parent, ClientFakes.ITEM_ID)
 check.Check("DrawItem returns a sprite", sprite ~= nil, tostring(sprite))
@@ -57,7 +47,7 @@ for _, invalidId in ipairs(invalidIds) do
     )
     check.Equal(
         "invalid id " .. tostring(invalidId) .. " makes no SetAssociatedObject call",
-        countEntries(client.log, "SetAssociatedObject"),
+        client.Logged("SetAssociatedObject"),
         0
     )
     check.Equal(
@@ -125,7 +115,7 @@ check.Equal(
 )
 check.Equal(
     "an invalid id with the placeholder off makes no SetAssociatedObject call",
-    countEntries(client.log, "SetAssociatedObject"),
+    client.Logged("SetAssociatedObject"),
     0
 )
 
