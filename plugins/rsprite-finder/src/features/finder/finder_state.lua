@@ -50,6 +50,7 @@ function FinderState.New(saved)
         selectedTile = nil,
         selectedEntry = nil,
         variant = 1,
+        entries = nil,
         results = nil,
         tiles = {},
         total = 0,
@@ -89,13 +90,18 @@ function FinderState.Invalidate(state)
     state.results = nil
 end
 
+local function forgetSearch(state)
+    state.entries = nil
+    state.results = nil
+end
+
 function FinderState.SetQuery(state, query)
     if query == state.query then
         return false
     end
     state.query = query
     state.page = 1
-    FinderState.Invalidate(state)
+    forgetSearch(state)
     return true
 end
 
@@ -106,7 +112,7 @@ function FinderState.SetTag(state, tag)
     end
     state.tag = normalisedTag
     state.page = 1
-    FinderState.Invalidate(state)
+    forgetSearch(state)
     return true
 end
 
@@ -209,7 +215,10 @@ end
 
 function FinderState.Refresh(state, search, options, change)
     if state.results == nil then
-        state.results = ResultList.Build(search(state.query, state.tag), options)
+        if state.entries == nil then
+            state.entries = search(state.query, state.tag)
+        end
+        state.results = ResultList.Build(state.entries, options)
     end
     state.total = #state.results.tiles
     local tilePosition, variant = ResultList.Locate(state.results, state.selectedName)
@@ -225,7 +234,7 @@ function FinderState.Refresh(state, search, options, change)
     end
 end
 
-function FinderState.CopyText(name)
+function FinderState.GetText(name)
     return string.format(COPY_FORMAT, name)
 end
 

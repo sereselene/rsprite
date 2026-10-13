@@ -102,7 +102,11 @@ local function applySource(sprite, chain, options)
                 Client.SetProperty(sprite, "sprite", source)
             )
         then
-            Client.SetProperty(sprite, "hidden", false)
+            Warnings.IfFailed(
+                "show sprite",
+                "showing a sprite",
+                Client.SetProperty(sprite, "hidden", false)
+            )
             return position
         end
     end

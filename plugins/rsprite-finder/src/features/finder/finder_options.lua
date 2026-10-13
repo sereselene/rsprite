@@ -23,13 +23,13 @@ function FinderOptions.Current()
     return current
 end
 
-function FinderOptions.Set(value, selected)
+function FinderOptions.Set(optionName, selected)
     local options = FinderOptions.Current()
     local enabled = selected == true
-    if options[value] == nil or options[value] == enabled then
+    if options[optionName] == nil or options[optionName] == enabled then
         return false
     end
-    options[value] = enabled
+    options[optionName] = enabled
     Preferences.Save(FinderOptions.PREFERENCES_NAME, options)
     return true
 end

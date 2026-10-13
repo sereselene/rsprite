@@ -3,6 +3,13 @@ local Client = {}
 local PREFIX = "rsprite-finder: "
 
 local warnedKeys = {}
+local fontConfigsById = {}
+
+Client.CLICK_LABELS = { listening = "listening for clicks", handling = "handling a click" }
+Client.MOUSE_ENTER_LABELS =
+    { listening = "listening for the mouse entering", handling = "handling the mouse entering" }
+Client.MOUSE_LEAVE_LABELS =
+    { listening = "listening for the mouse leaving", handling = "handling the mouse leaving" }
 
 function Client.Warn(key, message)
     if warnedKeys[key] then
@@ -33,9 +40,21 @@ function Client.Font(fontName)
     end)
 end
 
+local function fontConfig(fontId)
+    local cached = fontConfigsById[fontId]
+    if cached ~= nil then
+        return cached
+    end
+    local found = config.Font.FromID(fontId)
+    if fontId ~= nil then
+        fontConfigsById[fontId] = found
+    end
+    return found
+end
+
 function Client.TextWidth(fontId, text)
     return Client.Call("measuring text", function()
-        return config.Font.FromID(fontId):GetStringWidth(text, false)
+        return fontConfig(fontId):GetStringWidth(text, false)
     end)
 end
 
@@ -63,6 +82,9 @@ function Client.NewText(parent, layout)
         text.clickthrough = true
         if layout.centred then
             text.alignHorizontal = ui.AlignMode.CENTRE
+        end
+        if layout.centredVertically then
+            text.alignVertical = ui.AlignMode.CENTRE
         end
         if layout.hidden then
             text.hidden = true
@@ -98,30 +120,24 @@ function Client.Set(component, propertyName, value)
     end) == true
 end
 
-function Client.OnClick(component, key, callback)
+function Client.OnHook(component, hookName, key, labels, callback)
     if component == nil then
         return false
     end
-    return Client.Call("listening for clicks", function()
-        component:Subscribe(ui.Hook.ONCLICK, key, function()
-            Client.Call("handling a click", callback)
-            return false
+    return Client.Call(labels.listening, function()
+        component:Subscribe(ui.Hook[hookName], key, function(...)
+            local handled = Client.Call(labels.handling, callback, ...)
+            return handled ~= false
         end)
         return true
     end) == true
 end
 
-function Client.OnHook(component, hookName, key, callback)
-    if component == nil then
+function Client.OnClick(component, key, callback)
+    return Client.OnHook(component, "ONCLICK", key, Client.CLICK_LABELS, function()
+        Client.Call(Client.CLICK_LABELS.handling, callback)
         return false
-    end
-    return Client.Call("listening for " .. hookName, function()
-        component:Subscribe(ui.Hook[hookName], key, function(...)
-            local handled = Client.Call("handling " .. hookName, callback, ...)
-            return handled ~= false
-        end)
-        return true
-    end) == true
+    end)
 end
 
 function Client.NewLayer(parent, layout)
@@ -227,6 +243,19 @@ function Client.NewComboField(parent, layout)
         combo.errorCaretRGBA = layout.caretColour
         return combo
     end)
+end
+
+function Client.LoadStructuredData(label, key)
+    return Client.Call(label, function()
+        return PersistentDB:GetStructuredData(key)
+    end)
+end
+
+function Client.SaveStructuredData(label, key, value)
+    return Client.Call(label, function()
+        PersistentDB:SetStructuredData(key, value)
+        return true
+    end) == true
 end
 
 function Client.Subscribe(eventName, key, callback)

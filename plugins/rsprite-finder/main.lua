@@ -6,4 +6,4 @@ function PluginShutdown()
     App.Shutdown()
 end
 
-return App
+return {}

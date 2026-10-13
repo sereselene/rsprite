@@ -21,6 +21,7 @@ function PrettyuiFake.Install()
         spinners = {},
         tooltips = {},
         checkboxGroups = {},
+        raiseOnContent = false,
     }
 
     local function record(...)
@@ -110,12 +111,22 @@ function PrettyuiFake.Install()
     prettyui.Window = {
         new = function(parent, options)
             record("Window.new", options.title)
-            local window = {
+            local content = ui.Layer.new(parent)
+            local window = setmetatable({
                 parent = parent,
                 options = options,
-                content = ui.Layer.new(parent),
                 visible = true,
-            }
+            }, {
+                __index = function(_, key)
+                    if key ~= "content" then
+                        return nil
+                    end
+                    if fake.raiseOnContent then
+                        error("the window content is not ready")
+                    end
+                    return content
+                end,
+            })
             function window:Show()
                 record("Window.Show")
                 self.visible = true

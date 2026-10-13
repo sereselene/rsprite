@@ -89,4 +89,15 @@ check.Equal("a hidden cross does not stay lit", cross.image.spriteID, 36700)
 client.Click(cross.root)
 check.Equal("a hidden cross ignores clicks", cleared, 1)
 
+local brokenBox = TextBox.New(parent, { x = 8, y = 8, width = 250, height = 28 }, function()
+    error("the typing handler broke")
+end)
+FinderFakes.Type(client, brokenBox, "a")
+FinderFakes.Type(client, brokenBox, "ab")
+check.Equal(
+    "a raising typing handler warns once in plain words",
+    client.WarningsMentioning("rsprite-finder: handling typing failed"),
+    1
+)
+
 check.Finish()

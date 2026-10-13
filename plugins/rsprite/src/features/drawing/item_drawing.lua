@@ -1,5 +1,6 @@
 local Arguments = require("src/utils/arguments")
 local Client = require("src/services/client")
+local NumberText = require("src/utils/number_text")
 local Placeholder = require("src/components/placeholder")
 local SpriteContents = require("src/features/drawing/sprite_contents")
 local SpriteDrawing = require("src/features/drawing/sprite_drawing")
@@ -29,34 +30,39 @@ local function setItemProperty(sprite, propertyName, value)
     )
 end
 
-local function clearArt(sprite, clearFirst)
-    if clearFirst then
-        Client.SetAssociatedObject(sprite, SpriteContents.CLEARED_ITEM)
+local function clearArt(sprite, mayHoldOldArt)
+    if mayHoldOldArt then
+        Warnings.IfFailed(
+            "clear item",
+            "clearing item art",
+            Client.SetAssociatedObject(sprite, SpriteContents.CLEARED_ITEM)
+        )
         SpriteContents.ForgetItem(sprite)
     end
 end
 
-local function showPlaceholder(sprite, options, clearFirst)
-    clearArt(sprite, clearFirst)
+local function showPlaceholder(sprite, options, mayHoldOldArt)
+    clearArt(sprite, mayHoldOldArt)
     Placeholder.Show(sprite, options.placeholder ~= false)
     return false
 end
 
-local function showItem(sprite, itemId, options, clearBeforePlaceholder)
+local function showItem(sprite, itemId, options, mayHoldOldArt)
     setItemProperty(sprite, "hidden", true)
     if itemId == nil then
-        clearArt(sprite, clearBeforePlaceholder)
+        clearArt(sprite, mayHoldOldArt)
         return false
     end
     local wholeId = WholeNumber.From(itemId)
     if wholeId == nil then
         local outcome = options.placeholder ~= false and "the placeholder is shown instead"
             or "nothing is shown"
+        local idText = NumberText.Describe(itemId)
         Warnings.Once(
-            "item " .. tostring(itemId),
-            "item id " .. tostring(itemId) .. " is not a whole number 0 or above, so " .. outcome
+            "item id " .. idText,
+            "item id " .. idText .. " is not a whole number 0 or above, so " .. outcome
         )
-        return showPlaceholder(sprite, options, clearBeforePlaceholder)
+        return showPlaceholder(sprite, options, mayHoldOldArt)
     end
     local description = "drawing item " .. wholeId
     if

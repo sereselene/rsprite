@@ -14,6 +14,9 @@ local SWAP_ICON_Y = 100
 local SWAP_CAPTION_Y = 132
 local SWAP_COLUMN_WIDTH = 72
 local ICON_SIZE = 24
+local LABEL_HEIGHT = 14
+local LEFT_INSET = 8
+local CAPTION_OFFSET = 4
 local CLOSE_WIDTH = 56
 local CLOSE_HEIGHT = 18
 local BACKGROUND_COLOUR = 0x1A1A1AF0
@@ -50,7 +53,7 @@ local function addLabel(parent, text, x, y, width)
     return safely("label " .. text, function()
         local label = ui.Text.new(parent)
         label:SetPos(x, y)
-        label:SetSize(width, 14)
+        label:SetSize(width, LABEL_HEIGHT)
         label.content = text
         label.font = id.Font.MUSEO_SANS_11PT_REGULAR
         label.rgba = LABEL_COLOUR
@@ -107,7 +110,7 @@ local function createPanel()
         background.rgba = BACKGROUND_COLOUR
         background.clickthrough = false
 
-        addLabel(root, "rsprite example", 8, 6, 200)
+        addLabel(root, "rsprite example", LEFT_INSET, 6, 200)
 
         local closeButton = ui.Rectangle.new(root)
         closeButton:SetPos(PANEL_WIDTH - CLOSE_WIDTH - 6, 4)
@@ -235,23 +238,23 @@ local SWAPS = {
 }
 
 local function drawSwaps(root)
-    addLabel(root, "swaps", 8, SWAP_HEADING_Y, 200)
+    addLabel(root, "swaps", LEFT_INSET, SWAP_HEADING_Y, 200)
     for position, swap in ipairs(SWAPS) do
-        local x = 8 + (position - 1) * SWAP_COLUMN_WIDTH
+        local x = LEFT_INSET + (position - 1) * SWAP_COLUMN_WIDTH
         safely("swap " .. swap.caption, function()
             return swap.draw(root, { x = x, y = SWAP_ICON_Y, size = ICON_SIZE })
         end)
-        addLabel(root, swap.caption, x - 4, SWAP_CAPTION_Y, SWAP_COLUMN_WIDTH)
+        addLabel(root, swap.caption, x - CAPTION_OFFSET, SWAP_CAPTION_Y, SWAP_COLUMN_WIDTH)
     end
 end
 
 local function drawEverything(root)
     for position, drawing in ipairs(DRAWINGS) do
-        local x = 8 + (position - 1) * COLUMN_WIDTH
+        local x = LEFT_INSET + (position - 1) * COLUMN_WIDTH
         local sprite, resolvedIndex = safely(drawing.description, function()
             return drawing.draw(root, x)
         end)
-        addLabel(root, drawing.caption, x - 4, CAPTION_Y, COLUMN_WIDTH)
+        addLabel(root, drawing.caption, x - CAPTION_OFFSET, CAPTION_Y, COLUMN_WIDTH)
         local indexText = drawing.isItem and "" or (", resolved index " .. tostring(resolvedIndex))
         say(drawing.description .. " gave a sprite " .. tostring(sprite ~= nil) .. indexText)
     end

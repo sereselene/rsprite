@@ -1,22 +1,15 @@
+local NumberText = require("src/utils/number_text")
 local WholeNumber = require("src/utils/whole_number")
 
 local Arguments = {}
 
+local TABLE_HINTS = {
+    parent = "Pass the component itself, such as a window's content",
+    sprite = "Pass the sprite itself, such as the one rsprite.Draw returned",
+}
+
 local function isFinite(value)
     return value == value and value ~= math.huge and value ~= -math.huge
-end
-
-local function describeNumber(value)
-    if value ~= value then
-        return "nan"
-    end
-    if value == math.huge then
-        return "inf"
-    end
-    if value == -math.huge then
-        return "-inf"
-    end
-    return tostring(value)
 end
 
 local function numberOption(options, optionName)
@@ -39,8 +32,16 @@ end
 
 function Arguments.ComponentProblem(functionName, argumentName, value)
     local valueType = type(value)
-    if valueType == "userdata" or valueType == "table" then
+    if valueType == "userdata" then
         return nil
+    end
+    if valueType == "table" then
+        return string.format(
+            "%s: %s must be a component, not a table. %s",
+            functionName,
+            argumentName,
+            TABLE_HINTS[argumentName]
+        )
     end
     return string.format(
         "%s: %s must be a component, got %s",
@@ -84,7 +85,7 @@ function Arguments.WholeNumberOptionProblem(functionName, options, optionName)
         "%s: option %s must be a whole number 0 or above, got %s",
         functionName,
         optionName,
-        tostring(value)
+        NumberText.Describe(value)
     )
 end
 
@@ -97,7 +98,7 @@ function Arguments.FiniteOptionProblem(functionName, options, optionName)
         "%s: option %s must be a finite number, got %s",
         functionName,
         optionName,
-        describeNumber(value)
+        NumberText.Describe(value)
     )
 end
 
@@ -114,7 +115,7 @@ function Arguments.SizeOptionProblem(functionName, options, optionName)
         "%s: option %s must be above 0, got %s",
         functionName,
         optionName,
-        describeNumber(value)
+        NumberText.Describe(value)
     )
 end
 

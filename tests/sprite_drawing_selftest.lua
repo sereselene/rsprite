@@ -6,7 +6,7 @@ local SOURCE = "tests/sprite_drawing_selftest.lua:"
 local check = Report.New("sprite drawing")
 local client = ClientFakes.Install()
 local rsprite = ClientFakes.LoadRsprite().Public
-local parent = {}
+local parent = client.NewComponent("layer")
 
 client.ClearLog()
 local sprite, index = rsprite.Draw(parent, { "MISSING", "SKILL_ATTACK" })
@@ -179,6 +179,12 @@ resolved = rsprite.SetSource(sprite, "MISSING", { placeholder = false })
 check.Equal("SetSource with nothing resolving gives nil", resolved, nil)
 check.Same("SetSource with placeholder false hides the sprite", client.log, { "hidden true" })
 
+check.Check(
+    "a fake component counts as a component",
+    rsprite.Draw(parent, "SKILL_ATTACK") ~= nil,
+    type(parent)
+)
+
 local spritesBefore = #client.sprites
 check.Raises("a nil parent raises", function()
     rsprite.Draw(nil, "SKILL_ATTACK")
@@ -186,6 +192,25 @@ end, "rsprite.Draw: parent must be a component, got nil", SOURCE)
 check.Raises("a string parent raises", function()
     rsprite.Draw("panel", "SKILL_ATTACK")
 end, "rsprite.Draw: parent must be a component, got string", SOURCE)
+check.Raises(
+    "a table parent raises with a hint",
+    function()
+        rsprite.Draw({}, "SKILL_ATTACK")
+    end,
+    "rsprite.Draw: parent must be a component, not a table. Pass the component itself, such as a window's content",
+    SOURCE
+)
+check.Raises("a number parent keeps the plain message", function()
+    rsprite.Draw(5, "SKILL_ATTACK")
+end, "rsprite.Draw: parent must be a component, got number", SOURCE)
+check.Raises(
+    "SetSource on a table raises with a hint",
+    function()
+        rsprite.SetSource({}, "SKILL_ATTACK")
+    end,
+    "rsprite.SetSource: sprite must be a component, not a table. Pass the sprite itself, such as the one rsprite.Draw returned",
+    SOURCE
+)
 check.Raises("an unknown option raises", function()
     rsprite.Draw(parent, "SKILL_ATTACK", { colur = 1 })
 end, "rsprite.Draw: unknown option colur", SOURCE)

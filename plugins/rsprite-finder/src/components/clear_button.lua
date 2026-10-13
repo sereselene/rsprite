@@ -41,17 +41,17 @@ function ClearButton.New(parent, layout, onClear)
         Client.Set(button.image, "hidden", not button.visible)
     end
 
-    Client.OnHook(button.root, "ONMOUSEOVER", HOOK_KEY, function()
+    Client.OnHook(button.root, "ONMOUSEOVER", HOOK_KEY, Client.MOUSE_ENTER_LABELS, function()
         button.hovered = true
         paint()
         return true
     end)
-    Client.OnHook(button.root, "ONMOUSELEAVE", HOOK_KEY, function()
+    Client.OnHook(button.root, "ONMOUSELEAVE", HOOK_KEY, Client.MOUSE_LEAVE_LABELS, function()
         button.hovered = false
         paint()
         return true
     end)
-    Client.OnHook(button.root, "ONCLICK", HOOK_KEY, function()
+    Client.OnHook(button.root, "ONCLICK", HOOK_KEY, Client.CLICK_LABELS, function()
         if button.visible then
             onClear()
         end

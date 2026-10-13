@@ -126,4 +126,14 @@ check.Equal(
 )
 check.Equal("a family takes one tile", grid.tiles[3].square.hidden, true)
 
+client.ClearLog()
+grid.ShowSelection(1)
+check.Equal("moving the selection makes no sprite calls", #client.log, 0)
+check.Equal("the newly selected tile has its border", grid.tiles[1].border.hidden, false)
+check.Equal("the old selection loses its border", grid.tiles[2].border.hidden, true)
+check.Equal("a hidden tile keeps its border hidden", grid.tiles[3].border.hidden, true)
+grid.ShowSelection(3)
+check.Equal("selecting a hidden tile shows no border", grid.tiles[3].border.hidden, true)
+check.Equal("selecting a hidden tile clears the others", grid.tiles[1].border.hidden, true)
+
 check.Finish()
