@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check the release tag and build the release files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out the tag with every existing tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Check the tag against the versions and the changelog
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: npm run validate-tag -- "$RELEASE_TAG"
+
+      - name: Run the tests
+        run: npm test
+
+      - name: Check the generated catalogue files
+        run: npm run catalogue -- --check
+
+      - name: Build the release zips
+        run: npm run package
+
+      - name: Test each zip independently
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          for archive in "release/rsprite-${version}.zip" "release/rsprite-finder-${version}.zip"; do
+            result="$(python3 -m zipfile -t "$archive")"
+            echo "$archive: $result"
+            if [ "$result" != "Done testing" ]; then
+              exit 1
+            fi
+          done
+
+      - name: Write the release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node scripts/release-notes.mjs "$RELEASE_TAG" > release/notes.md
+
+      - name: Keep the zips and notes for the release job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-files
+          path: |
+            release/*.zip
+            release/notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Create the draft release
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download the zips and notes
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-files
+          path: release
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          extra_options=()
+          case "$version" in
+            0.*) extra_options+=(--prerelease) ;;
+          esac
+          gh release create "$RELEASE_TAG" \
+            "release/rsprite-${version}.zip" \
+            "release/rsprite-finder-${version}.zip" \
+            --draft \
+            --verify-tag \
+            --title "$RELEASE_TAG" \
+            --notes-file release/notes.md \
+            "${extra_options[@]}"

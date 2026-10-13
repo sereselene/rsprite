@@ -7,19 +7,21 @@
   },
   "scripts": {
     "prepare": "lefthook install",
-    "test": "node scripts/test.mjs && node --test scripts/tests/generate_catalogue.test.mjs scripts/tests/validate_release_tag.test.mjs",
+    "test": "node scripts/test.mjs && node --test \"scripts/tests/*.test.mjs\"",
     "format": "stylua --config-path stylua.toml .",
     "format:check": "stylua --config-path stylua.toml --check .",
     "catalogue": "node scripts/generate-catalogue.mjs",
     "placeholder": "node scripts/generate-placeholder.mjs",
     "finder-images": "node scripts/generate-finder-images.mjs",
     "dev-install": "node scripts/dev-install.mjs",
+    "package": "node scripts/package.mjs",
     "check-platform": "node scripts/check-platform.mjs",
     "validate-tag": "node scripts/validate-release-tag.mjs"
   },
   "devDependencies": {
     "@johnnymorganz/stylua-bin": "2.5.2",
     "fengari": "0.1.5",
-    "lefthook": "^1.13.6"
+    "fflate": "0.8.3",
+    "lefthook": "1.13.6"
   }
 }

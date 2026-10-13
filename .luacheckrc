@@ -6,22 +6,22 @@ ignore = {
 	"212/self",
 }
 
-globals = {
+read_globals = {
 	"ui",
 	"id",
 	"Event",
 	"Plugin",
 	"PersistentDB",
 	"config",
-	"Vector4",
-	"PluginShutdown",
 	"rsprite",
+}
+
+globals = {
+	"PluginShutdown",
 }
 
 exclude_files = {
 	"node_modules",
-	"dist",
-	"standalone",
 }
 
 files["examples"] = {
@@ -33,6 +33,6 @@ files["plugins/rsprite-finder"] = {
 }
 
 files["tests"] = {
-	globals = { "prettyui" },
+	globals = { "prettyui", "rsprite", "ui", "id", "Event", "Plugin", "PersistentDB", "config" },
 	read_globals = { "selftest" },
 }

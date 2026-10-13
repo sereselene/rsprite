@@ -1,3 +1,5 @@
+selftest.UsePlugin("rsprite-finder")
+
 local ClientFakes = require("tests/support/client_fakes")
 local FinderFakes = require("tests/support/finder_fakes")
 local Report = require("tests/support/report")

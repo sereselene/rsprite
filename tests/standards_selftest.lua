@@ -1,3 +1,5 @@
+selftest.UsePlugin("rsprite")
+
 local Report = require("tests/support/report")
 
 local check = Report.New("standards")

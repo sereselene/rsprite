@@ -272,7 +272,7 @@ const formatLua = (source, outputPath) => {
 const spritesText = (entries) => entries.map((entry) => `${entry.id}\t${entry.name}\n`).join("");
 
 const buildText = (client, entries) =>
-    `${JSON.stringify({ client, count: entries.length, maxId: entries[entries.length - 1].id }, null, 2)}\n`;
+    `${JSON.stringify({ client, count: entries.length, highestId: entries[entries.length - 1].id }, null, 2)}\n`;
 
 const generate = (options) => {
     const paths = pathsFor(options.root);
@@ -347,7 +347,8 @@ const generate = (options) => {
             console.log(`catalogue: left out the orphaned curated name ${orphan}`);
         }
         console.log(
-            `catalogue: rebuilt ${describe(paths, paths.curation)} from the committed sprite list for client ${client}, ${rules.length} rules, ${Object.keys(liveCurated).length} curated names. sprites.tsv and build.json are unchanged.`,
+            `catalogue: rebuilt ${describe(paths, paths.curation)} from the committed sprite list for client ${client}, ` +
+                `${rules.length} rules, ${Object.keys(liveCurated).length} curated names. sprites.tsv and build.json are unchanged.`,
         );
         return;
     }

@@ -46,7 +46,7 @@ describe("generate-catalogue", () => {
         assert.equal(run.status, 0, run.stderr);
         const files = generatedFiles(root);
         assert.equal(files.sprites, "0\tALPHA_ICON\n1\tBETA_BUTTON\n2\tGAMMA_ICON\n3\tDELTA_OLD\n5\tEPSILON_ICON\n6\tZETA_BUTTON\n");
-        assert.deepEqual(JSON.parse(files.build), { client: "100-1", count: 6, maxId: 6 });
+        assert.deepEqual(JSON.parse(files.build), { client: "100-1", count: 6, highestId: 6 });
         assert.match(files.curation, /ALPHA_ICON = \{/);
         assert.match(files.curation, /width = 16/);
         assert.match(files.curation, /prefix = "ALPHA_"/);
