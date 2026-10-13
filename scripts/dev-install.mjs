@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const INSTALLS = [
-    { source: join(repositoryRoot, "plugins", "rsprite"), folder: "rsprite", name: "rsprite" },
-    { source: join(repositoryRoot, "plugins", "rsprite-finder"), folder: "rsprite-finder", name: "rsprite-finder" },
-    { source: join(repositoryRoot, "examples", "basic"), folder: "rsprite-example", name: "rsprite-example" },
+    { source: join(repositoryRoot, "plugins", "rsprite"), name: "rsprite" },
+    { source: join(repositoryRoot, "plugins", "rsprite-finder"), name: "rsprite-finder" },
+    { source: join(repositoryRoot, "examples", "basic"), name: "rsprite-example" },
 ];
 
 const stop = (message) => {
@@ -45,17 +45,17 @@ if (!existsSync(target) || !statSync(target).isDirectory()) {
 }
 
 const refusals = INSTALLS.filter((install) => {
-    const destination = join(target, install.folder);
+    const destination = join(target, install.name);
     return existsSync(destination) && manifestName(destination) !== install.name;
 });
 if (refusals.length > 0) {
     stop(
-        `These folders exist but are not rsprite's, so nothing was changed:\n${refusals.map((install) => `  ${join(target, install.folder)}`).join("\n")}`,
+        `These folders exist but are not rsprite's, so nothing was changed:\n${refusals.map((install) => `  ${join(target, install.name)}`).join("\n")}`,
     );
 }
 
 for (const install of INSTALLS) {
-    const destination = join(target, install.folder);
+    const destination = join(target, install.name);
     if (existsSync(destination)) {
         rmSync(destination, { recursive: true, force: true });
     }

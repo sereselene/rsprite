@@ -1,5 +1,4 @@
 /node_modules
-/dist
-/standalone
+/release
 __pycache__/
 *.pyc

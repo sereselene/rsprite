@@ -29,16 +29,13 @@ jobs:
     name: Lua formatting and lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: write
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -47,12 +44,26 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
-      - name: Install Luacheck
+      - name: Restore the cached Luacheck install
+        id: luacheck-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ~/.luarocks
+          key: ${{ runner.os }}-${{ runner.arch }}-luarocks-luacheck-${{ env.LUACHECK_VERSION }}
+
+      - name: Install Lua
         run: |
           sudo apt-get update
-          sudo apt-get install --yes lua5.1 luarocks liblua5.1-0-dev
+          sudo apt-get install --yes lua5.1
+
+      - name: Install Luacheck
+        if: steps.luacheck-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get install --yes luarocks liblua5.1-0-dev
           luarocks install --local luacheck "$LUACHECK_VERSION"
-          echo "$HOME/.luarocks/bin" >> "$GITHUB_PATH"
+
+      - name: Put Luacheck on the path
+        run: echo "$HOME/.luarocks/bin" >> "$GITHUB_PATH"
 
       - name: Check Lua formatting (StyLua)
         id: stylua-check
@@ -94,13 +105,14 @@ jobs:
           } > /tmp/lua-summary.md
           cat /tmp/lua-summary.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Comment Lua checks summary on pull request
+      - name: Keep the Lua checks summary for the comment job
         if: always() && github.event_name == 'pull_request'
-        uses: ./.github/actions/comment-checks-summary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          marker: "<!-- lua-checks-summary -->"
-          summary-file: /tmp/lua-summary.md
-          label: Lua
+          name: lua-checks-summary
+          path: /tmp/lua-summary.md
+          retention-days: 1
+          if-no-files-found: warn
 
       - name: Fail if Lua checks failed
         run: |
@@ -108,17 +120,49 @@ jobs:
             exit 1
           fi
 
+  lua-summary-comment:
+    name: Comment the Lua checks summary
+    needs: lua
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Check out the comment action from the base branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: .github/actions
+          persist-credentials: false
+
+      - name: Download the Lua checks summary
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: lua-checks-summary
+          path: ${{ runner.temp }}/lua-checks-summary
+
+      - name: Comment the Lua checks summary on the pull request
+        uses: ./.github/actions/comment-checks-summary
+        with:
+          marker: "<!-- lua-checks-summary -->"
+          summary-file: ${{ runner.temp }}/lua-checks-summary/lua-summary.md
+          label: Lua
+
   tests:
-    name: Selftests and generator tests
+    name: Tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -137,10 +181,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: .nvmrc
           cache: npm

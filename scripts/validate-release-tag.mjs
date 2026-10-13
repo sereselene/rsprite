@@ -37,6 +37,16 @@ const isHigher = (first, second) => {
     return false;
 };
 
+const readManifest = (pluginsRoot, pluginName) => {
+    const manifestPath = join(pluginsRoot, pluginName, "plugin.json");
+    if (!existsSync(manifestPath)) throw new TagError(`plugins/${pluginName} has no plugin.json. Every folder under plugins must be a plugin.`);
+    try {
+        return JSON.parse(readFileSync(manifestPath, "utf8"));
+    } catch (error) {
+        throw new TagError(`plugins/${pluginName}/plugin.json is not valid JSON: ${error.message}`);
+    }
+};
+
 const listExistingTags = (repositoryRoot) => {
     const run = spawnSync("git", ["tag", "--list", "v*"], { cwd: repositoryRoot, encoding: "utf8" });
     if (run.status !== 0) throw new TagError(`Could not list the existing tags: ${run.stderr || run.stdout}`);
@@ -49,8 +59,7 @@ const validate = (tag, existingTags, repositoryRoot) => {
 
     const pluginsRoot = join(repositoryRoot, "plugins");
     for (const plugin of readdirSync(pluginsRoot, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
-        const manifestPath = join(pluginsRoot, plugin.name, "plugin.json");
-        const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+        const manifest = readManifest(pluginsRoot, plugin.name);
         if (manifest.version !== version) {
             throw new TagError(`plugins/${plugin.name}/plugin.json says version ${manifest.version}, not ${version}. Every plugin in this repository ships on the same version.`);
         }

@@ -1,3 +1,5 @@
+selftest.UsePlugin("rsprite-finder")
+
 local Report = require("tests/support/report")
 local ResultList = require("src/features/finder/result_list")
 

@@ -1,3 +1,7 @@
+lefthook: node node_modules/lefthook/bin/index.js
+
+source_dir: scripts/hooks/
+
 commit-msg:
   commands:
     gitlint:
@@ -13,7 +17,7 @@ pre-commit:
       run: luacheck --config .luacheckrc {staged_files}
 
 pre-push:
-  commands:
-    release-tag:
+  scripts:
+    "release-tag.mjs":
+      runner: node
       use_stdin: true
-      run: node scripts/validate-release-tag.mjs --pushed

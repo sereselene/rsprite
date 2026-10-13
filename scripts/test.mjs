@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describePath, repositoryRoot } from "./lua-runner.mjs";
+import { describePath, failedCheckLines, repositoryRoot } from "./lua-runner.mjs";
 
 const singleFileRunner = fileURLToPath(new URL("./runlua.mjs", import.meta.url));
 const testsRoot = join(repositoryRoot, "tests");
@@ -22,7 +22,7 @@ const findSelftests = (directory) => {
 const runSelftest = (relativePath) => {
     const run = spawnSync(process.execPath, [singleFileRunner, relativePath], { cwd: repositoryRoot, encoding: "utf8" });
     const output = `${run.stdout ?? ""}${run.stderr ?? ""}`.split(/\r?\n/);
-    const failedChecks = output.filter((line) => /FAIL\s*$/.test(line));
+    const failedChecks = failedCheckLines(output);
     const raised = run.status !== 0;
     return { output, raised, failedChecks, passed: !raised && failedChecks.length === 0 };
 };

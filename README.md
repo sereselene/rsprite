@@ -209,6 +209,7 @@ You need Node 22.12 or later. StyLua and lefthook install platform specific bina
 | `npm run placeholder` | Regenerates the placeholder image. |
 | `npm run finder-images` | Regenerates the finder's images: the text box background and the preview checkerboard. |
 | `npm run dev-install -- --target <folder>` | Copies rsprite, the finder and the example plugin into the game's dev plugin folder. |
+| `npm run package` | Builds `rsprite-X.Y.Z.zip` and `rsprite-finder-X.Y.Z.zip` in `release`, using each `plugin.json` version. |
 | `npm run validate-tag -- v0.1.0` | Checks a release tag against each `plugin.json`, `rsprite.version` and the changelog. |
 
 `dev-install` can also read the target folder from the `RSPRITE_DEV_PLUGIN_FOLDER` environment variable. It only replaces its own `rsprite`, `rsprite-finder` and `rsprite-example` folders and won't touch anything else. After installing, run `prf` in the game's console, then `prl rsprite`, `prl rsprite-finder` and `prl rsprite-example`. Open the example's settings cog to see each feature drawn, or the finder's cog to start searching.
@@ -219,9 +220,16 @@ The git hooks call Luacheck and gitlint by name, so install both wherever you co
 
 ## Releasing
 
-Both plugins in this repository are released together on the same version. `validate-tag` checks each `plugin.json`, `rsprite.version` and the changelog against the tag, and runs again from a git hook when you push a tag.
+Both plugins in this repository are released together on the same version. To release 0.1.1, for example:
 
-While a release is in progress, its changelog heading reads `## [0.1.0] - Unreleased`. When you tag the release, replace `Unreleased` with the date, for example `## [0.1.0] - 2026-10-10`. A tag is refused while its heading still says `Unreleased`.
+1. In `CHANGELOG.md`, change the heading `## [0.1.1] - Unreleased` to the day you tag, such as `## [0.1.1] - 2026-10-20`. A tag is refused while its heading still says `Unreleased`.
+2. Set the version to `0.1.1` in `plugins/rsprite/plugin.json`, `plugins/rsprite-finder/plugin.json` and `rsprite.version` in `plugins/rsprite/src/app/init.lua`.
+3. Commit the change and push it to `main` through a pull request.
+4. Tag that commit on `main` and push the tag with `git push origin v0.1.1`.
+5. Wait for the Release workflow on the Actions tab. It checks the tag with `validate-tag`, runs the tests and the catalogue check, builds both zips with `npm run package`, and creates a draft release with the notes from this changelog.
+6. Review the draft, its notes and both zips, then publish it. While the major version is 0, it is marked as a prerelease.
+
+The `pre-push` hook also runs `validate-tag` when you push a tag, so most mistakes show up before the tag leaves your machine. The workflow checks every tag either way, and never publishes a release by itself.
 
 <details open>
 <summary><h2>Contributing</h2></summary>

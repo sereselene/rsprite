@@ -1,3 +1,5 @@
+selftest.UsePlugin("rsprite-finder")
+
 local Report = require("tests/support/report")
 local TagOptions = require("src/features/finder/tag_options")
 

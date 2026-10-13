@@ -7,14 +7,11 @@
     "Plugin",
     "PersistentDB",
     "config",
-    "Vector4",
     "PluginShutdown",
     "rsprite",
     "prettyui"
   ],
   "workspace.ignoreDir": [
-    "node_modules",
-    "dist",
-    "standalone"
+    "node_modules"
   ]
 }

@@ -1,3 +1,5 @@
+selftest.UsePlugin("rsprite")
+
 local ClientFakes = require("tests/support/client_fakes")
 local Report = require("tests/support/report")
 

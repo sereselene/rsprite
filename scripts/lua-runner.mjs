@@ -8,14 +8,13 @@ const { lua, lauxlib, lualib, to_luastring, to_jsstring } = fengari;
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-const FINDER_TESTS = "tests/finder/";
+const FAILED_CHECK_LINE = /^\[selftest\] .+: .* FAIL$/;
 
-const moduleSearchRootsFor = (entryRelativePath) => {
-    const pluginFolder = entryRelativePath.startsWith(FINDER_TESTS) ? "rsprite-finder" : "rsprite";
-    return [repositoryRoot, join(repositoryRoot, "plugins", pluginFolder)];
-};
+export const forwardSlashes = (path) => path.split("\\").join("/");
 
-export const describePath = (path) => relative(repositoryRoot, path).split("\\").join("/");
+export const describePath = (path) => forwardSlashes(relative(repositoryRoot, path));
+
+export const failedCheckLines = (lines) => lines.filter((line) => FAILED_CHECK_LINE.test(line));
 
 const bootstrap = `
 local loadedModules = package.loaded
@@ -78,6 +77,10 @@ function selftest.NewUserdata()
     return __newuserdata()
 end
 
+function selftest.UsePlugin(name)
+    __useplugin(name)
+end
+
 function selftest.LoadPlugin(folder)
     local pluginModules = {}
     local environment = setmetatable({}, { __index = _G })
@@ -123,14 +126,21 @@ export const runLuaFile = (entryRelativePath) => {
         return 1;
     }
 
-    const moduleSearchRoots = moduleSearchRootsFor(entryRelativePath.split("\\").join("/"));
+    let pluginRoot = null;
     const state = lauxlib.luaL_newstate();
     lualib.luaL_openlibs(state);
 
     registerFunction(state, "__readmodule", (innerState) => {
         const name = to_jsstring(lauxlib.luaL_checkstring(innerState, 1));
-        const candidates = moduleSearchRoots.map((searchRoot) => join(searchRoot, `${name}.lua`));
+        const searchRoots = pluginRoot === null ? [repositoryRoot] : [repositoryRoot, pluginRoot];
+        const candidates = searchRoots.map((searchRoot) => join(searchRoot, `${name}.lua`));
         const found = candidates.find((candidate) => existsSync(candidate));
+        if (found === undefined && pluginRoot === null) {
+            return lauxlib.luaL_error(
+                innerState,
+                to_luastring(`no module ${name} under the repository root. Name the plugin this test covers first, with selftest.UsePlugin("rsprite") or selftest.UsePlugin("rsprite-finder")`),
+            );
+        }
         if (found === undefined) {
             return lauxlib.luaL_error(innerState, to_luastring(`no module ${name}, looked in ${candidates.map(describePath).join(" and ")}`));
         }
@@ -167,6 +177,19 @@ export const runLuaFile = (entryRelativePath) => {
         return 1;
     });
 
+    registerFunction(state, "__useplugin", (innerState) => {
+        const name = to_jsstring(lauxlib.luaL_checkstring(innerState, 1));
+        const requestedRoot = join(repositoryRoot, "plugins", name);
+        if (!existsSync(join(requestedRoot, "main.lua"))) {
+            return lauxlib.luaL_error(innerState, to_luastring(`there is no plugin called ${name} under plugins`));
+        }
+        if (pluginRoot !== null && pluginRoot !== requestedRoot) {
+            return lauxlib.luaL_error(innerState, to_luastring(`this test already uses ${describePath(pluginRoot)}, so it cannot also use plugins/${name}`));
+        }
+        pluginRoot = requestedRoot;
+        return 0;
+    });
+
     registerFunction(state, "__newuserdata", (innerState) => {
         lua.lua_newuserdata(innerState, 0);
         return 1;
@@ -177,7 +200,7 @@ export const runLuaFile = (entryRelativePath) => {
         return 1;
     }
 
-    const chunkName = to_luastring(`@${entryRelativePath.split("\\").join("/")}`);
+    const chunkName = to_luastring(`@${forwardSlashes(entryRelativePath)}`);
     if (lauxlib.luaL_loadbuffer(state, to_luastring(readFileSync(entryPath, "utf8")), null, chunkName) !== lua.LUA_OK) {
         console.error(`load: ${to_jsstring(lua.lua_tostring(state, -1))}`);
         return 1;

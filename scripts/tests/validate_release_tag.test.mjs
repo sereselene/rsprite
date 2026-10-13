@@ -87,4 +87,22 @@ describe("validate-release-tag", () => {
         assert.equal(run.status, 1);
         assert.match(run.stderr, /is not a release tag/);
     });
+
+    test("refuses a plugin folder without a plugin.json, with a clear message", () => {
+        const root = newWorkspace({ changelog: changelogWith("## [0.1.0] - 2026-10-10") });
+        mkdirSync(join(root, "plugins", "stray"), { recursive: true });
+        const run = runValidator(root, "v0.1.0");
+        assert.equal(run.status, 1);
+        assert.match(run.stderr, /^validate-release-tag: plugins\/stray has no plugin\.json/);
+        assert.doesNotMatch(run.stderr, /\n\s+at /);
+    });
+
+    test("refuses a plugin.json that is not valid JSON, with a clear message", () => {
+        const root = newWorkspace({ changelog: changelogWith("## [0.1.0] - 2026-10-10") });
+        writeFileSync(join(root, "plugins", "rsprite-finder", "plugin.json"), "{ not json");
+        const run = runValidator(root, "v0.1.0");
+        assert.equal(run.status, 1);
+        assert.match(run.stderr, /^validate-release-tag: plugins\/rsprite-finder\/plugin\.json is not valid JSON/);
+        assert.doesNotMatch(run.stderr, /\n\s+at /);
+    });
 });
