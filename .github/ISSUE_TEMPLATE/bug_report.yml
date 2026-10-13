@@ -28,7 +28,7 @@ body:
     attributes:
       label: rsprite version
       description: The value of `rsprite.version`.
-      placeholder: "0.1.0"
+      placeholder: "X.Y.Z"
     validations:
       required: true
   - type: textarea
