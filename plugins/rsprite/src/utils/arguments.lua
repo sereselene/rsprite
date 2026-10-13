@@ -2,6 +2,31 @@ local WholeNumber = require("src/utils/whole_number")
 
 local Arguments = {}
 
+local function isFinite(value)
+    return value == value and value ~= math.huge and value ~= -math.huge
+end
+
+local function describeNumber(value)
+    if value ~= value then
+        return "nan"
+    end
+    if value == math.huge then
+        return "inf"
+    end
+    if value == -math.huge then
+        return "-inf"
+    end
+    return tostring(value)
+end
+
+local function numberOption(options, optionName)
+    local value = options ~= nil and options[optionName] or nil
+    if type(value) ~= "number" then
+        return nil
+    end
+    return value
+end
+
 function Arguments.CombineTypes(...)
     local combined = {}
     for _, expectedTypes in ipairs({ ... }) do
@@ -60,6 +85,36 @@ function Arguments.WholeNumberOptionProblem(functionName, options, optionName)
         functionName,
         optionName,
         tostring(value)
+    )
+end
+
+function Arguments.FiniteOptionProblem(functionName, options, optionName)
+    local value = numberOption(options, optionName)
+    if value == nil or isFinite(value) then
+        return nil
+    end
+    return string.format(
+        "%s: option %s must be a finite number, got %s",
+        functionName,
+        optionName,
+        describeNumber(value)
+    )
+end
+
+function Arguments.SizeOptionProblem(functionName, options, optionName)
+    local problem = Arguments.FiniteOptionProblem(functionName, options, optionName)
+    if problem ~= nil then
+        return problem
+    end
+    local value = numberOption(options, optionName)
+    if value == nil or value > 0 then
+        return nil
+    end
+    return string.format(
+        "%s: option %s must be above 0, got %s",
+        functionName,
+        optionName,
+        describeNumber(value)
     )
 end
 

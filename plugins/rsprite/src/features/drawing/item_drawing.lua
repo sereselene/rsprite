@@ -1,13 +1,12 @@
 local Arguments = require("src/utils/arguments")
 local Client = require("src/services/client")
 local Placeholder = require("src/components/placeholder")
+local SpriteContents = require("src/features/drawing/sprite_contents")
 local SpriteDrawing = require("src/features/drawing/sprite_drawing")
 local Warnings = require("src/services/warnings")
 local WholeNumber = require("src/utils/whole_number")
 
 local ItemDrawing = {}
-
-local CLEARED_ITEM = -1
 
 local SET_ITEM_OPTION_TYPES = {
     quantity = "number",
@@ -30,23 +29,32 @@ local function setItemProperty(sprite, propertyName, value)
     )
 end
 
-local function showPlaceholder(sprite, options, clearFirst)
+local function clearArt(sprite, clearFirst)
     if clearFirst then
-        Client.SetAssociatedObject(sprite, CLEARED_ITEM)
+        Client.SetAssociatedObject(sprite, SpriteContents.CLEARED_ITEM)
+        SpriteContents.ForgetItem(sprite)
     end
+end
+
+local function showPlaceholder(sprite, options, clearFirst)
+    clearArt(sprite, clearFirst)
     Placeholder.Show(sprite, options.placeholder ~= false)
     return false
 end
 
 local function showItem(sprite, itemId, options, clearBeforePlaceholder)
     setItemProperty(sprite, "hidden", true)
+    if itemId == nil then
+        clearArt(sprite, clearBeforePlaceholder)
+        return false
+    end
     local wholeId = WholeNumber.From(itemId)
     if wholeId == nil then
+        local outcome = options.placeholder ~= false and "the placeholder is shown instead"
+            or "nothing is shown"
         Warnings.Once(
             "item " .. tostring(itemId),
-            "item id "
-                .. tostring(itemId)
-                .. " is not a whole number 0 or above, so the placeholder is shown instead"
+            "item id " .. tostring(itemId) .. " is not a whole number 0 or above, so " .. outcome
         )
         return showPlaceholder(sprite, options, clearBeforePlaceholder)
     end
@@ -56,6 +64,7 @@ local function showItem(sprite, itemId, options, clearBeforePlaceholder)
     then
         return showPlaceholder(sprite, options, true)
     end
+    SpriteContents.NoteItem(sprite)
     if options.quantity ~= nil then
         setItemProperty(
             sprite,
@@ -73,6 +82,7 @@ end
 function ItemDrawing.DrawItem(parent, itemId, options)
     local problem = Arguments.ComponentProblem("rsprite.DrawItem", "parent", parent)
         or optionsProblem("rsprite.DrawItem", options, DRAW_ITEM_OPTION_TYPES)
+        or SpriteDrawing.LayoutProblem("rsprite.DrawItem", options)
     if problem ~= nil then
         error(problem, 2)
     end

@@ -2,6 +2,7 @@ local Arguments = require("src/utils/arguments")
 local Client = require("src/services/client")
 local Placeholder = require("src/components/placeholder")
 local SourceChain = require("src/features/drawing/source_chain")
+local SpriteContents = require("src/features/drawing/sprite_contents")
 local Warnings = require("src/services/warnings")
 
 local SpriteDrawing = {}
@@ -26,6 +27,25 @@ local APPEARANCE_OPTION_TYPES = {
 
 local DRAW_OPTION_TYPES =
     Arguments.CombineTypes(SpriteDrawing.LAYOUT_OPTION_TYPES, APPEARANCE_OPTION_TYPES)
+
+local SIZE_OPTIONS = { "size", "width", "height" }
+local POSITION_OPTIONS = { "x", "y", "xAnchor", "yAnchor" }
+
+function SpriteDrawing.LayoutProblem(functionName, options)
+    for _, optionName in ipairs(SIZE_OPTIONS) do
+        local problem = Arguments.SizeOptionProblem(functionName, options, optionName)
+        if problem ~= nil then
+            return problem
+        end
+    end
+    for _, optionName in ipairs(POSITION_OPTIONS) do
+        local problem = Arguments.FiniteOptionProblem(functionName, options, optionName)
+        if problem ~= nil then
+            return problem
+        end
+    end
+    return nil
+end
 
 function SpriteDrawing.CreateLaidOut(parent, options)
     local created, sprite = Client.CreateSprite(parent)
@@ -100,12 +120,21 @@ function SpriteDrawing.SetSource(sprite, nameOrChain, options)
     if chain == nil then
         error(chainProblem, 2)
     end
+    if SpriteContents.HasItem(sprite) then
+        Warnings.IfFailed(
+            "hide item sprite",
+            "hiding an item sprite",
+            Client.SetProperty(sprite, "hidden", true)
+        )
+        SpriteContents.ClearItem(sprite)
+    end
     return applySource(sprite, chain, options or {})
 end
 
 function SpriteDrawing.Draw(parent, nameOrChain, options)
     local problem = Arguments.ComponentProblem("rsprite.Draw", "parent", parent)
         or Arguments.OptionsProblem("rsprite.Draw", options, DRAW_OPTION_TYPES)
+        or SpriteDrawing.LayoutProblem("rsprite.Draw", options)
     if problem ~= nil then
         error(problem, 2)
     end

@@ -1,28 +1,32 @@
 # rsprite
 
-Find and draw any RuneScape 3 sprite in one line.
+Find and draw any RS3 sprite in one line.
+
+> **Status:** early development. rsprite is not on the Plugin Hub yet. Version 0.1.0 is being tested against game client 950-1.
 
 ![The rsprite finder window, with a grid of sprite previews beside the details and copy boxes for the selected sprite](docs/images/finder.png)
 
-rsprite is a small library for developers working with the RuneScape 3 plugin API that makes finding and using the game's sprites painless. It looks names up safely, searches every sprite in the game you're running, and draws sprites and item art with the fiddly bits already handled.
+rsprite is a small Lua library for developers building plugins with the RS3 plugin API. It finds sprites by name or keyword, looks them up safely, and draws sprites and item icons for you, so you don't have to write the same drawing code in every plugin.
 
-It has no dependencies of its own, so it works whether or not your plugin uses PrettyUI.
+It has no dependencies, so you can use it with or without PrettyUI.
 
 ## Installing
 
-Add rsprite to your `plugin.json` like any other Plugin Hub dependency:
+Add rsprite to the `requiredDependencies` in your plugin's `plugin.json`. While you develop against a local copy, use its folder name:
 
 ```json
 {
   "requiredDependencies": {
-    "rsprite": 0
+    "rsprite": "rsprite"
   }
 }
 ```
 
-Swap the `0` for rsprite's Plugin Hub id once it's published. The client loads rsprite before your plugin and hands you its table as the global `rsprite`, named after the key you used.
+When rsprite is published on the Plugin Hub, replace `"rsprite"` with its Plugin Hub id.
 
-## A quick taste
+The client loads rsprite before your plugin and makes it available as the global `rsprite`. The global takes its name from the key, so keep the key as `rsprite`.
+
+## Quick example
 
 ```lua
 local attackId = rsprite.Get("SKILL_ATTACK")
@@ -36,149 +40,200 @@ local icon = rsprite.Draw(parent, { "SKILL_NECROMANCY", "BP3_MISSION_ICON_SKILL_
 local ring = rsprite.DrawItem(parent, 13562, { x = 40, y = 10, size = 24 })
 ```
 
-`Draw` works through the chain in order and draws the first thing that exists. Here that's the Necromancy mission icon, because there's no `SKILL_NECROMANCY` sprite. If nothing in the chain exists, you get a plain grey placeholder rather than an empty gap, so missing art is obvious while you're working. `DrawItem` draws an item's art from its item id, ready to go.
+- `Get` turns a sprite name into its id. Names are not case sensitive.
+- `Draw` tries each entry in the list in order and draws the first one that exists. There is no `SKILL_NECROMANCY` sprite, so here it draws the Necromancy mission icon instead. If nothing in the list exists, it draws a grey placeholder square, so missing art is easy to spot.
+- `DrawItem` draws an item's icon from its item id.
 
-## The API
+## API
 
 | Function | What it does |
 | --- | --- |
 | `rsprite.version` | The library version, such as `"0.1.0"`. |
-| `rsprite.Get(name)` | The sprite id for a name, or `nil`. Case insensitive and cached. |
-| `rsprite.Name(id)` | The sprite name for an id, or `nil`. Cached. |
-| `rsprite.Resolve(nameOrChain)` | The first source in a chain that exists, plus its position, or `nil`. |
-| `rsprite.Draw(parent, nameOrChain, options)` | A new `ui.Sprite` showing the first source that exists, plus its position. |
-| `rsprite.SetSource(sprite, nameOrChain, options)` | Points an existing sprite at a new chain and gives back the position used. |
-| `rsprite.DrawItem(parent, itemId, options)` | A new `ui.Sprite` showing item art. |
-| `rsprite.SetItem(sprite, itemId, options)` | Points an existing item sprite at another item, giving `true` or `false`. |
-| `rsprite.Find(text, options)` | Matching entries and the total match count. An empty string lists every sprite. |
+| `rsprite.Get(name)` | The sprite id for a name, or `nil`. Not case sensitive. Results are cached. |
+| `rsprite.Name(id)` | The sprite name for an id, or `nil`. Results are cached. |
+| `rsprite.Resolve(nameOrChain)` | The first source in a chain that exists and its position in the chain, or `nil`. |
+| `rsprite.Draw(parent, nameOrChain, options)` | Creates a new `ui.Sprite` showing the first source that exists. Returns the sprite and the position used. |
+| `rsprite.SetSource(sprite, nameOrChain, options)` | Changes an existing sprite to a new chain, clearing any item icon it showed. Returns the position used. |
+| `rsprite.DrawItem(parent, itemId, options)` | Creates a new `ui.Sprite` showing an item's icon. Returns the sprite. |
+| `rsprite.SetItem(sprite, itemId, options)` | Shows an item's icon on an existing sprite. Returns `true` if an item is shown, otherwise `false`. |
+| `rsprite.Find(text, options)` | Searches sprite names, tags and aliases. Returns the matching entries and the total number of matches. |
 | `rsprite.Tags()` | Every tag you can filter by, sorted alphabetically. |
-| `rsprite.BuildIndex(onReady)` | Gets the search index ready over a few ticks and calls `onReady` when done. |
-| `rsprite.IsIndexReady()` | Whether the search index is ready yet. |
+| `rsprite.BuildIndex(onReady)` | Prepares the search index over a few ticks, then calls `onReady` with the number of sprite names. |
+| `rsprite.IsIndexReady()` | Whether the search index is ready. |
 
-A chain is an array, though a single value works too. Each entry can be a sprite name, a sprite id, or a resource handle from your own `Plugin.resources`.
+### Chains
 
-`Draw` takes `x`, `y`, `xAnchor`, `yAnchor`, `size` (24 by default), `width`, `height`, `colour` (a packed `0xRRGGBBAA` number), `alpha` and `placeholder` (`true` by default). `DrawItem` takes the same layout options, `x`, `y`, `xAnchor`, `yAnchor`, `size`, `width` and `height`, plus `quantity` and `placeholder`. `SetSource` takes `colour`, `alpha` and `placeholder`, and `SetItem` takes `quantity` and `placeholder`.
+`Draw`, `SetSource` and `Resolve` take either one source or a list of sources, called a chain. Each entry can be:
 
-`Find` takes `tags`, `limit` (50 by default) and `offset`. Each entry looks like `{ name, id, tags, aliases, width, height }`, and `width` and `height` are only there when they're known. Exact names and aliases come first, then names or aliases that start with your search, then tag matches, then everything else. Within each group, the handpicked sprites in the curated list come first.
+- a sprite name, such as `"SKILL_ATTACK"`
+- a sprite id, such as `9318`
+- an image from your own plugin, such as `Plugin.resources.my_icon`
 
-Searching for an empty string browses the lot: curated sprites first, then everything else by id. It still respects `tags`, `limit` and `offset`, so `rsprite.Find("", { tags = { "skill" } })` lists every skill sprite, a page at a time. `rsprite.Tags()` gives you the tag names to offer, which is handy for a filter dropdown.
+rsprite uses the first entry that exists. A chain is a plain Lua array, so a `nil` entry ends it. Build chains without gaps.
 
-## Finding sprites
+An empty chain draws the placeholder, the same as a chain where nothing exists. Pass `placeholder = false` to draw nothing instead.
 
-rsprite comes with a companion plugin, `rsprite-finder`, for picking sprites while you build. Players never need it, so install it in your dev setup rather than listing it as a dependency. It needs rsprite and PrettyUI enabled alongside it.
+### Options
 
-Open the Plugin Hub's Manage list, click the finder's settings cog, and press **OPEN FINDER**. You get a window with:
+| Option | Used by | Meaning |
+| --- | --- | --- |
+| `x`, `y` | `Draw`, `DrawItem` | Position inside the parent, in interface units. Any finite number, negatives included. Default 0. |
+| `xAnchor`, `yAnchor` | `Draw`, `DrawItem` | The point in the parent that `x` and `y` are measured from, as a fraction of its width and height. 0 is the left or top edge, 0.5 the middle and 1 the right or bottom edge. Any finite number. Default 0. |
+| `size` | `Draw`, `DrawItem` | Width and height together, as a finite number above 0. Default 24. |
+| `width`, `height` | `Draw`, `DrawItem` | Set each side on its own, overriding `size`. Each must be a finite number above 0. |
+| `colour` | `Draw`, `SetSource` | A tint, as a packed `0xRRGGBBAA` number. |
+| `alpha` | `Draw`, `SetSource` | Opacity, from 0 to 1. |
+| `quantity` | `DrawItem`, `SetItem` | A stack number shown on the item, as a whole number 0 or above. |
+| `placeholder` | `Draw`, `SetSource`, `DrawItem`, `SetItem` | Whether to draw the grey placeholder when nothing exists. Default `true`. |
 
-- **A search box.** Type a few words, such as `arrow`, `skill attack` or `necromancy`, and the results update once you stop typing. The cross at the end of the box clears it in one click.
-- **A tag dropdown**, to narrow things down to buttons, icons, skills and so on.
-- **A favourites star** next to the dropdown. Turn it on to see only the sprites you've starred, newest first. The search box and tag dropdown still narrow them down.
-- **A grid of live previews**, 30 to a page, with arrows to page through. Hover over one to see its full name.
-- **A detail panel** for whichever sprite you click. It shows a larger preview at 16, 24, 32, 48 or 64 px, its id, its size when that's known, and its tags and aliases.
+An unknown option, or a value that breaks these rules, raises an error. See Errors and warnings.
 
-Around the preview are a few controls:
+### Items
 
-- **The star** in the top left adds the sprite to your favourites, or takes it out again.
-- **The swap button** in the top right switches the preview's background between dark, light and a checkerboard, so you can see sprites with dark or transparent edges properly. It only changes the large preview, not the grid.
-- **The arrows** either side of the preview step through a sprite's numbered variants, when it has any.
+For items, `nil` means no item. `DrawItem(parent, nil)` creates an empty, hidden sprite, and `SetItem(sprite, nil)` clears the icon, hides the sprite and returns `false`. Neither shows the placeholder or prints a warning, so empty slots and reused rows stay quiet.
 
-Underneath are four boxes you can copy from:
+Any other id that isn't a whole number 0 or above prints one warning and shows the placeholder, unless `placeholder` is `false`.
 
-- **Name** holds the bare sprite name.
-- **Get** holds a ready to paste `rsprite.Get("NAME")` line.
-- **Draw** holds `rsprite.Draw(parent, "NAME", { size = N })`, where N is whichever preview size is lit. Pick another size and it updates straight away.
-- **PrettyUI** holds `window:AddSprite(rsprite.Get("NAME"), { size = N })`, for dropping the sprite into a PrettyUI window. It follows the lit size too.
+rsprite can't tell whether an item has an icon, so a valid item id without one draws nothing.
 
-Click a box, then press Ctrl+A and Ctrl+C to copy the whole thing. A long value may show only its end in the box, but it all gets copied. The boxes put their text back if you type into them by accident.
+`SetSource` and `SetItem` can swap one sprite between an item icon and a sprite, so a single slot can show either.
 
-The finder's cog also has two options, both on to begin with. Change either one and an open finder updates straight away.
+### Search
 
-- **Group numbered variants** folds sprites that only differ by a trailing number, such as `ATTACKING_RETICULE_FRAME_1` to `_3`, into one tile. Hover over it to see how many variants it holds, then step through them with the arrows beside the preview. Everything in the detail panel, copy boxes included, follows the variant you're on.
-- **Hide mobile and language copies** leaves out sprites with `_MOBILE` in their name, and the French, German, Portuguese and Spanish copies whose names end in `_FR`, `_DE`, `_PT` or `_ES`, with or without a number after them. English copies stay.
+`Find(text, options)` matches every word you type against sprite names, tags and aliases. Spaces, hyphens and underscores count as the same thing, and case doesn't matter.
 
-Favourites show exactly what you starred, whichever options are on. Starring keeps the exact variant you're looking at. If a game update removes a sprite you starred, it drops out of view but stays on your list, in case it comes back.
+Its options are `tags` (a list of tag names to filter by), `limit` (default 50) and `offset`, for paging through results. Each entry looks like `{ name, id, tags, aliases, width, height }`. `width` and `height` are only there when the size is known.
 
-The finder remembers your last search, tag, page, selection (down to the exact variant), preview size and preview background between sessions, along with your favourites and the options. The first time you open it, it spends a moment reading sprite names before the grid fills in.
+Results are ordered like this:
 
-## Using it with PrettyUI
+1. exact names and exact aliases
+2. names or aliases that start with your search
+3. tag matches
+4. everything else
 
-rsprite doesn't try to replace PrettyUI's widgets. It just gets you a good sprite to give them. `Resolve` hands back whatever wins the chain, so feed that straight in:
+Within each group, sprites from the curated list come first, then shorter names.
+
+An empty search lists every sprite, curated sprites first, then the rest by id. Tags, `limit` and `offset` still apply, so `rsprite.Find("", { tags = { "skill" } })` lists every skill sprite a page at a time. `rsprite.Tags()` gives you the tag names, ready for a filter dropdown.
+
+The first search takes a moment while rsprite reads the sprite names. To spread that over a few ticks instead, call `rsprite.BuildIndex()` when your plugin starts.
+
+### Errors and warnings
+
+Anything rsprite can't find comes back as `nil`, so `if spriteId then` is all the checking you need. rsprite also prints one `rsprite:` warning for each missing name, so typos show up in the console.
+
+Mistakes in how you call rsprite raise an error that points at your own line. That includes a `nil` parent, an unknown option, an option of the wrong type, a size of 0 or below, a position, anchor or size that isn't a finite number, and a quantity that isn't a whole number 0 or above. Problems at runtime, such as a sprite that doesn't exist, never raise.
+
+If the function you pass to `BuildIndex` raises an error, rsprite prints one warning with the error, skips that function from then on, and still finishes the index.
+
+### Notes
+
+- rsprite always draws at a set size, 24 by 24 unless you choose another. `Find` reports a sprite's real size when it's known, either from its name (`_32PX` means 32 by 32) or from the curated list.
+- Sprite names come from the game you're running, so they always match the current game build.
+- If you inspect a sprite drawn by `Draw` or `SetSource`, the source it used is held in its `sprite` property.
+
+## The finder
+
+rsprite comes with a separate plugin, `rsprite-finder`, for finding sprites while you build. Players never need it, so install it in your own development setup rather than listing it as a dependency. It needs rsprite and PrettyUI enabled.
+
+Open the Plugin Hub's Manage list, click the finder's settings cog, and press **OPEN FINDER**. The window has:
+
+- **A search box.** Type a few words, such as `arrow`, `skill attack` or `necromancy`. Results update when you stop typing. The clear button at the end of the box empties it.
+- **A tag dropdown**, to narrow the results to buttons, icons, skills and so on.
+- **A favourites star** next to the dropdown. Turn it on to show only the sprites you've starred, newest first. The search box and tag dropdown still apply.
+- **A grid of previews**, 30 per page, with arrows to move between pages. Hover over a preview to see its full name.
+- **A detail panel** for the sprite you select. It shows a larger preview at 16, 24, 32, 48 or 64 px, the sprite's id, its size when known, and its tags and aliases.
+
+Around the large preview:
+
+- **The star** in the top left adds the sprite to your favourites or removes it.
+- **The swap button** in the top right changes the preview background between dark, light and a checkerboard, which helps with dark or transparent sprites. It only affects the large preview.
+- **The arrows** either side step through a sprite's numbered variants, when it has any.
+
+Below the details are four boxes you can copy from:
+
+- **Name**: the sprite name.
+- **Get**: `rsprite.Get("NAME")`.
+- **Draw**: `rsprite.Draw(parent, "NAME", { size = N })`, where N is the selected preview size.
+- **PrettyUI**: `window:AddSprite(rsprite.Get("NAME"), { size = N })`, for adding the sprite to a PrettyUI window.
+
+Click a box, then press Ctrl+A and Ctrl+C to copy it. Long values may only show their end in the box, but the whole value is copied. If you type in a box by accident, it puts its text back.
+
+The finder's settings cog has two options, both on by default. Changes apply to an open finder straight away.
+
+- **Group numbered variants** shows sprites that differ only by a number at the end, such as `ATTACKING_RETICULE_FRAME_1` to `_3`, as one tile. Hover over the tile to see how many variants it has, and use the arrows beside the preview to step through them. The details and copy boxes follow the variant you're on.
+- **Hide mobile and language copies** hides sprites with `_MOBILE` in their name, and French, German, Portuguese and Spanish copies whose names end in `_FR`, `_DE`, `_PT` or `_ES`, with or without a number after them. English copies stay.
+
+Favourites always show exactly what you starred, whatever the options are set to, including the exact variant. If a game update removes a sprite you starred, it's hidden but kept in your list in case it returns.
+
+The finder remembers your search, tag, page, selection, preview size, preview background, favourites and options between sessions. The first time you open it, it takes a moment to read the sprite names before the grid fills in.
+
+## Using rsprite with PrettyUI
+
+rsprite doesn't replace PrettyUI's components. It finds the right sprite for them. `Resolve` returns whichever source in the chain exists, which you can pass straight to PrettyUI:
 
 ```lua
 local close = rsprite.Resolve({ "CLOSE_BUTTONS_0", Plugin.resources.close_fallback })
 prettyui.Sprite.new(parent, close, { size = 16 })
 ```
 
-The same works anywhere PrettyUI wants a sprite id or an image, including `SimpleButton` and `BuffBar`.
+This works anywhere PrettyUI accepts a sprite id or an image, including `SimpleButton` and `BuffBar`.
 
-## Nothing found means nil
+## Working on rsprite
 
-rsprite gives you `nil` for anything it can't find, so a plain `if spriteId then` does the right thing. It also prints one `rsprite:` warning per missing name, so typos show up in the console rather than as a blank square.
+You need Node 22.12 or later. StyLua and lefthook install platform specific binaries, so if you work from both Windows and WSL, run `npm install` once on each side. Don't run `npm ci` locally, because it removes the other side's binaries. `npm run check-platform` tells you if the current side is missing anything.
 
-Mistakes in how you call rsprite, like a `nil` parent or an option name it doesn't recognise, raise an error that points at your own line. Problems at runtime, like an unknown sprite, never raise.
+| Command | What it does |
+| --- | --- |
+| `npm test` | Runs the Lua selftests, then the script tests. |
+| `npm run format` | Formats every Lua file with StyLua. |
+| `npm run catalogue` | Rebuilds the generated module from the committed sprite list after a tag or alias change. |
+| `npm run catalogue -- --dump <path> --client <build>` | Rebuilds the whole catalogue from a new game build's sprite name list. |
+| `npm run catalogue -- --check` | Fails if the generated catalogue files are out of date. |
+| `npm run placeholder` | Regenerates the placeholder image. |
+| `npm run finder-images` | Regenerates the finder's images: the text box background and the preview checkerboard. |
+| `npm run dev-install -- --target <folder>` | Copies rsprite, the finder and the example plugin into the game's dev plugin folder. |
+| `npm run validate-tag -- v0.1.0` | Checks a release tag against each `plugin.json`, `rsprite.version` and the changelog. |
 
-## Sizes
+`dev-install` can also read the target folder from the `RSPRITE_DEV_PLUGIN_FOLDER` environment variable. It only replaces its own `rsprite`, `rsprite-finder` and `rsprite-example` folders and won't touch anything else. After installing, run `prf` in the game's console, then `prl rsprite`, `prl rsprite-finder` and `prl rsprite-example`. Open the example's settings cog to see each feature drawn, or the finder's cog to start searching.
 
-rsprite always draws at a size, 24 by 24 unless you say otherwise. Where a sprite's size is known, `Find` tells you.
+Raw sprite name lists are never stored in this repository. Keep them alongside it, for example in `../sprite-dumps/950-1.txt`, and pass one to `--dump` when a new game build comes out.
 
-## Where the names come from
+The git hooks call Luacheck and gitlint by name, so install both wherever you commit from.
 
-The names come from the game you're running, so they're never out of date. The first `Find` takes a moment while rsprite gets them ready. If you'd rather spread that over a few ticks, call `rsprite.BuildIndex(onReady)` early on.
+## Releasing
 
-The `catalogue/` folder holds the handwritten tags and aliases, plus a record of each game build's names so changes between builds can be reviewed.
+Both plugins in this repository are released together on the same version. `validate-tag` checks each `plugin.json`, `rsprite.version` and the changelog against the tag, and runs again from a git hook when you push a tag.
 
-## Contributing
+While a release is in progress, its changelog heading reads `## [0.1.0] - Unreleased`. When you tag the release, replace `Unreleased` with the date, for example `## [0.1.0] - 2026-10-10`. A tag is refused while its heading still says `Unreleased`.
 
-Tags and aliases are what make searching feel smart, and adding more is the easiest way to help. They live in two files.
+<details open>
+<summary><h2>Contributing</h2></summary>
 
-`catalogue/tag-rules.json` tags every sprite whose name starts with, contains or ends with some text:
+Tags and aliases make search work well, and adding more is the easiest way to help. They live in two files.
+
+`catalogue/tag-rules.json` tags every sprite whose name starts with (`prefix`), contains (`contains`) or ends with (`suffix`) some text:
 
 ```json
 { "prefix": "PRAYER_", "tags": ["prayer"] }
 ```
 
-`catalogue/curated.json` gives one sprite its own tags and aliases, and puts it near the top of searches:
+`catalogue/curated.json` gives a single sprite its own aliases, and optionally tags and a known `width` and `height`. Curated sprites also appear near the top of search results:
 
 ```json
-"SKILL_ATTACK": { "tags": ["combat"], "aliases": ["attack"] }
+"SKILL_ATTACK": { "aliases": ["attack"] }
 ```
 
-Then:
+To make a change:
 
 1. Edit either file.
 2. Run `npm run catalogue`. It rebuilds the generated module and checks that every curated name exists and every rule matches at least one sprite.
 3. Run `npm test`.
 4. Open a pull request.
 
-Rather not touch the files? Suggestions are just as welcome as issues on [the issue tracker](https://github.com/sereselene/rsprite/issues).
+You can also suggest tags, aliases or anything else on [the issue tracker](https://github.com/sereselene/rsprite/issues).
 
-## Working on rsprite
-
-You'll need Node 22.12 or later. StyLua and lefthook ship as platform specific binaries, so if you work from both Windows and WSL, run `npm install` once from each side. Never run `npm ci` locally, because it throws away the other side's binaries. `npm run check-platform` tells you if the current side is missing anything.
-
-| Command | What it does |
-| --- | --- |
-| `npm test` | Runs the Lua selftests, then the script tests. |
-| `npm run format` | Formats every Lua file with StyLua. |
-| `npm run catalogue` | Rebuilds the generated module from the committed sprite list after you change the tags or aliases. |
-| `npm run catalogue -- --dump <path> --client <build>` | Rebuilds the whole catalogue from a new game build's sprite name list. |
-| `npm run catalogue -- --check` | Fails if the generated catalogue files are out of date. |
-| `npm run placeholder` | Regenerates the placeholder image. |
-| `npm run finder-images` | Regenerates the finder's own images: the text box background and the checkerboard behind the preview. |
-| `npm run dev-install -- --target <folder>` | Copies rsprite, the finder and the example plugin into the game's dev plugin folder. |
-| `npm run validate-tag -- v0.1.0` | Checks a release tag against `plugin.json`, `rsprite.version` and the changelog. |
-
-`dev-install` also reads the target from the `RSPRITE_DEV_PLUGIN_FOLDER` environment variable. It only ever replaces its own `rsprite`, `rsprite-finder` and `rsprite-example` folders, and refuses to touch anything else. After installing, run `prf` in the game's console first, then `prl rsprite`, `prl rsprite-finder` and `prl rsprite-example`. Open the example's settings cog to see everything drawn, or the finder's cog to start searching.
-
-Raw sprite name lists never live in this repository. Keep them somewhere alongside it, such as `../sprite-dumps/950-1.txt`, and pass one to `--dump` when a new game build comes out.
-
-Luacheck and gitlint are called by name from the git hooks, so install them wherever you commit from.
-
-## Releasing
-
-Both plugins in this repository ship on the same version, and `validate-tag` checks every `plugin.json`, `rsprite.version` and the changelog against the tag. It runs again from a git hook whenever you push a tag.
-
-While a release is being worked on, its changelog heading reads `## [0.1.0] - Unreleased`. When you tag it, change `Unreleased` to the date you tag on, such as `## [0.1.0] - 2026-10-10`. A tag whose heading still says `Unreleased` is refused.
+</details>
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See the [licence](LICENSE).

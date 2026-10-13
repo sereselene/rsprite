@@ -4,11 +4,15 @@ local CLOSE_KEY = "rsprite-example:close"
 
 local PANEL_X = 80
 local PANEL_Y = 80
-local PANEL_WIDTH = 340
-local PANEL_HEIGHT = 96
+local PANEL_WIDTH = 444
+local PANEL_HEIGHT = 152
 local COLUMN_WIDTH = 54
 local ICON_Y = 30
 local CAPTION_Y = 62
+local SWAP_HEADING_Y = 82
+local SWAP_ICON_Y = 100
+local SWAP_CAPTION_Y = 132
+local SWAP_COLUMN_WIDTH = 72
 local ICON_SIZE = 24
 local CLOSE_WIDTH = 56
 local CLOSE_HEIGHT = 18
@@ -16,6 +20,8 @@ local BACKGROUND_COLOUR = 0x1A1A1AF0
 local CLOSE_COLOUR = 0x803030FF
 local LABEL_COLOUR = 0xFFFFFFFF
 local EXPLORERS_RING = 13562
+local SWAP_SOURCE = "SKILL_ATTACK"
+local INVALID_ITEM = -5
 local FIND_QUERIES = { "attack", "necromancy", "arrow" }
 local FIND_SHOWN = 5
 local DIALOG_MESSAGE =
@@ -174,6 +180,71 @@ local DRAWINGS = {
     },
 }
 
+local SWAPS = {
+    {
+        caption = "to sprite",
+        draw = function(parent, layout)
+            local sprite = rsprite.DrawItem(parent, EXPLORERS_RING, layout)
+            rsprite.SetSource(sprite, SWAP_SOURCE)
+            return sprite
+        end,
+    },
+    {
+        caption = "to item",
+        draw = function(parent, layout)
+            local sprite = rsprite.Draw(parent, SWAP_SOURCE, layout)
+            rsprite.SetItem(sprite, EXPLORERS_RING)
+            return sprite
+        end,
+    },
+    {
+        caption = "item back",
+        draw = function(parent, layout)
+            local sprite = rsprite.DrawItem(parent, EXPLORERS_RING, layout)
+            rsprite.SetSource(sprite, SWAP_SOURCE)
+            rsprite.SetItem(sprite, EXPLORERS_RING)
+            return sprite
+        end,
+    },
+    {
+        caption = "sprite back",
+        draw = function(parent, layout)
+            local sprite = rsprite.Draw(parent, SWAP_SOURCE, layout)
+            rsprite.SetItem(sprite, EXPLORERS_RING)
+            rsprite.SetSource(sprite, SWAP_SOURCE)
+            return sprite
+        end,
+    },
+    {
+        caption = "no count",
+        draw = function(parent, layout)
+            layout.quantity = 5
+            local sprite = rsprite.DrawItem(parent, EXPLORERS_RING, layout)
+            rsprite.SetSource(sprite, SWAP_SOURCE)
+            return sprite
+        end,
+    },
+    {
+        caption = "no grey",
+        draw = function(parent, layout)
+            local sprite = rsprite.DrawItem(parent, INVALID_ITEM, layout)
+            rsprite.SetItem(sprite, EXPLORERS_RING)
+            return sprite
+        end,
+    },
+}
+
+local function drawSwaps(root)
+    addLabel(root, "swaps", 8, SWAP_HEADING_Y, 200)
+    for position, swap in ipairs(SWAPS) do
+        local x = 8 + (position - 1) * SWAP_COLUMN_WIDTH
+        safely("swap " .. swap.caption, function()
+            return swap.draw(root, { x = x, y = SWAP_ICON_Y, size = ICON_SIZE })
+        end)
+        addLabel(root, swap.caption, x - 4, SWAP_CAPTION_Y, SWAP_COLUMN_WIDTH)
+    end
+end
+
 local function drawEverything(root)
     for position, drawing in ipairs(DRAWINGS) do
         local x = 8 + (position - 1) * COLUMN_WIDTH
@@ -226,6 +297,7 @@ local function onSettingsOpened(event)
     local root = createPanel()
     if root ~= nil then
         drawEverything(root)
+        drawSwaps(root)
     end
     printLookups()
     say("IsIndexReady before BuildIndex = " .. tostring(rsprite.IsIndexReady()))
