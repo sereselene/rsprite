@@ -34,6 +34,12 @@ local MUTABLE_SPRITE_PROPERTIES = {
 local originalPrint = print
 local handleTags = setmetatable({}, { __mode = "k" })
 
+local function newUserdataWith(metatable)
+    local userdata = selftest.NewUserdata()
+    debug.setmetatable(userdata, metatable)
+    return userdata
+end
+
 function ClientFakes.Handle(tag)
     local handle = selftest.NewUserdata()
     handleTags[handle] = tag
@@ -94,6 +100,10 @@ function ClientFakes.Install(options)
         raiseOnLookup = false,
         raiseOnFromId = false,
         raiseOnAssociate = false,
+        raiseOnClear = false,
+        raiseOnSetEntries = false,
+        raiseOnSubscribe = false,
+        fontLookups = 0,
         raiseOnCreate = false,
         components = {},
         destroyedComponents = 0,
@@ -214,6 +224,9 @@ function ClientFakes.Install(options)
             return true
         end
         function methods.SetEntries(self, entryIdsByLabel, selectedId)
+            if client.raiseOnSetEntries then
+                error("cannot fill these entries")
+            end
             fields.entryIdsByLabel = entryIdsByLabel
             fields.hasSelection = false
             fields.selectedID = -1
@@ -222,7 +235,7 @@ function ClientFakes.Install(options)
             end
             return true
         end
-        local component = setmetatable({}, {
+        local component = newUserdataWith({
             __index = function(_, key)
                 return methods[key] or fields[key]
             end,
@@ -231,6 +244,9 @@ function ClientFakes.Install(options)
             end,
         })
         function methods.Subscribe(_, hook, key, callback)
+            if client.raiseOnSubscribe then
+                error("cannot subscribe here")
+            end
             clickHandlers[component] = clickHandlers[component] or {}
             clickHandlers[component][hook .. ":" .. key] = callback
         end
@@ -284,12 +300,15 @@ function ClientFakes.Install(options)
             if client.raiseOnAssociate and itemId >= 0 then
                 error("cannot associate that item")
             end
+            if client.raiseOnClear and itemId < 0 then
+                error("cannot clear that item")
+            end
             fields.associatedObjectID = itemId
         end
         function methods.Destroy()
             record("Destroy")
         end
-        local sprite = setmetatable({}, {
+        local sprite = newUserdataWith({
             __index = function(_, key)
                 return methods[key] or fields[key]
             end,
@@ -358,6 +377,7 @@ function ClientFakes.Install(options)
         Cursor = { CURSOR_BLANK = { id = 99 } },
         Font = {
             FromID = function()
+                client.fontLookups = client.fontLookups + 1
                 return {
                     GetStringWidth = function(_, text)
                         return #text * TEXT_WIDTH_PER_CHARACTER

@@ -148,7 +148,34 @@ check.Equal("the search runs after 5 quiet ticks", finder.resultsText.content, "
 check.Equal("a short search fits one page", finder.pageText.content, "Page 1 of 1")
 check.Equal("the next arrow is disabled on the last page", finder.nextButton.disabled, true)
 
+local tileSprites = {}
+for _, tile in ipairs(finder.grid.tiles) do
+    tileSprites[tile.sprite] = true
+end
+local realSetSource = rsprite.SetSource
+local tileSourceCalls = 0
+rsprite.SetSource = function(sprite, ...)
+    if tileSprites[sprite] then
+        tileSourceCalls = tileSourceCalls + 1
+    end
+    return realSetSource(sprite, ...)
+end
+local tooltipsBeforeClick = prettyuiFake.Logged("Tooltip.attach")
 client.Click(finder.grid.tiles[2].square)
+rsprite.SetSource = realSetSource
+check.Equal("clicking a tile points no tile sprite anew", tileSourceCalls, 0)
+check.Equal(
+    "clicking a tile attaches no tooltips",
+    prettyuiFake.Logged("Tooltip.attach"),
+    tooltipsBeforeClick
+)
+local bordersShown = {}
+for position, tile in ipairs(finder.grid.tiles) do
+    if tile.border.hidden == false then
+        bordersShown[#bordersShown + 1] = position
+    end
+end
+check.Same("only the clicked tile has its border", bordersShown, { 2 })
 local picked = state.tiles[2].name
 check.Equal("clicking a tile selects it", state.selectedName, picked)
 check.Equal("the detail panel shows the pick", finder.detail.nameLines[1].content, picked)
@@ -496,5 +523,42 @@ check.Equal("the selection is restored", reloadedState.selectedName, state.selec
 check.Equal("the results come straight back", reloaded.resultsText.content, "4 matches")
 check.Equal("no second spinner is needed", prettyuiFake.Logged("Spinner.new"), 1)
 
+ReloadedWindow.Destroy()
+
+local windowsBefore = #prettyuiFake.windows
+prettyuiFake.raiseOnContent = true
+local warningsBeforeBuild = client.WarningsMentioning("building the finder window failed")
+check.Equal("a failed build reports failure", ReloadedWindow.Open(), false)
+check.Equal(
+    "a failed build warns once",
+    client.WarningsMentioning("building the finder window failed") - warningsBeforeBuild,
+    1
+)
+check.Equal(
+    "a failed build destroys its window",
+    prettyuiFake.windows[#prettyuiFake.windows].destroyed,
+    true
+)
+check.Equal("a failed build leaves no finder", (ReloadedWindow.Parts()), nil)
+check.Equal("a failed build is not open", ReloadedWindow.IsOpen(), false)
+check.Equal("opening again after a failure tries again", ReloadedWindow.Open(), false)
+check.Equal("each try makes a fresh window", #prettyuiFake.windows, windowsBefore + 2)
+check.Equal(
+    "a failing build still warns only once",
+    client.WarningsMentioning("building the finder window failed") - warningsBeforeBuild,
+    1
+)
+prettyuiFake.raiseOnContent = false
+check.Equal("opening once the problem is gone succeeds", ReloadedWindow.Open(), true)
+local rebuilt = ReloadedWindow.Parts()
+check.Check(
+    "the rebuilt finder is complete",
+    rebuilt ~= nil
+        and rebuilt.detail ~= nil
+        and #rebuilt.grid.tiles == 30
+        and rebuilt.emptyHint ~= nil,
+    "rebuilt"
+)
+check.Equal("the rebuilt finder is open", ReloadedWindow.IsOpen(), true)
 ReloadedWindow.Destroy()
 check.Finish()

@@ -6,7 +6,7 @@ local SOURCE = "tests/item_drawing_selftest.lua:"
 local check = Report.New("item drawing")
 local client = ClientFakes.Install()
 local rsprite = ClientFakes.LoadRsprite().Public
-local parent = {}
+local parent = client.NewComponent("layer")
 
 local function countEntries(log, prefix)
     local count = 0
@@ -279,5 +279,59 @@ end, "rsprite.SetItem: unknown option size", SOURCE)
 check.Raises("SetItem on a nil sprite raises", function()
     rsprite.SetItem(nil, ClientFakes.ITEM_ID)
 end, "rsprite.SetItem: sprite must be a component, got nil", SOURCE)
+check.Raises(
+    "a table parent raises with a hint",
+    function()
+        rsprite.DrawItem({}, ClientFakes.ITEM_ID)
+    end,
+    "rsprite.DrawItem: parent must be a component, not a table. Pass the component itself, such as a window's content",
+    SOURCE
+)
+check.Raises("a number parent keeps the plain message", function()
+    rsprite.DrawItem(5, ClientFakes.ITEM_ID)
+end, "rsprite.DrawItem: parent must be a component, got number", SOURCE)
+check.Raises(
+    "SetItem on a table raises with a hint",
+    function()
+        rsprite.SetItem({}, ClientFakes.ITEM_ID)
+    end,
+    "rsprite.SetItem: sprite must be a component, not a table. Pass the sprite itself, such as the one rsprite.Draw returned",
+    SOURCE
+)
+check.Raises("a nan quantity raises", function()
+    rsprite.DrawItem(parent, ClientFakes.ITEM_ID, { quantity = 0 / 0 })
+end, "rsprite.DrawItem: option quantity must be a whole number 0 or above, got nan", SOURCE)
+check.Raises("an infinite quantity raises", function()
+    rsprite.SetItem(sprite, ClientFakes.ITEM_ID, { quantity = math.huge })
+end, "rsprite.SetItem: option quantity must be a whole number 0 or above, got inf", SOURCE)
+
+rsprite.DrawItem(parent, 0 / 0)
+check.Equal(
+    "a nan item id warns with nan",
+    lastWarning(),
+    "rsprite: item id nan is not a whole number 0 or above, so the placeholder is shown instead"
+)
+rsprite.DrawItem(parent, math.huge, { placeholder = false })
+check.Equal(
+    "an infinite item id warns with inf",
+    lastWarning(),
+    "rsprite: item id inf is not a whole number 0 or above, so nothing is shown"
+)
+rsprite.DrawItem(parent, -math.huge)
+check.Equal(
+    "a negative infinite item id warns with -inf",
+    lastWarning(),
+    "rsprite: item id -inf is not a whole number 0 or above, so the placeholder is shown instead"
+)
+
+client.raiseOnClear = true
+local clearingSprite = rsprite.DrawItem(parent, ClientFakes.ITEM_ID)
+local warningsBeforeClear = #client.warnings
+rsprite.SetItem(clearingSprite, nil)
+rsprite.DrawItem(parent, ClientFakes.ITEM_ID)
+rsprite.SetItem(rsprite.DrawItem(parent, ClientFakes.ITEM_ID), -3)
+check.Equal("a raising clear warns once", client.WarningsMentioning("clearing item art failed"), 1)
+check.Equal("a raising clear adds only that warning", #client.warnings - warningsBeforeClear, 2)
+client.raiseOnClear = false
 
 check.Finish()

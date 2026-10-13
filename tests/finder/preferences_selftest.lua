@@ -47,7 +47,28 @@ PersistentDB = {
         error("storage is unavailable")
     end,
 }
+local warningsBeforeFailure = #client.warnings
 check.Equal("a failing save reports failure", Preferences.Save("state", { query = "x" }), false)
+Preferences.Save("state", { query = "y" })
+Preferences.Save("state", { query = "z" })
+check.Equal(
+    "a failing save warns once however often it is saved",
+    client.WarningsMentioning("rsprite-finder: saving the state settings failed"),
+    1
+)
+Preferences.Save("favourites", { names = {} })
+check.Equal(
+    "another setting that fails to save gets its own warning",
+    client.WarningsMentioning("rsprite-finder: saving the favourites settings failed"),
+    1
+)
 check.Equal("a failing load gives nil", Preferences.Load("state"), nil)
+Preferences.Load("state")
+check.Equal(
+    "a failing load warns once",
+    client.WarningsMentioning("rsprite-finder: loading the state settings failed"),
+    1
+)
+check.Equal("each failure warns exactly once", #client.warnings - warningsBeforeFailure, 3)
 
 check.Finish()

@@ -1,5 +1,6 @@
 local Client = require("src/services/client")
 local FinderState = require("src/features/finder/finder_state")
+local HiddenSprite = require("src/utils/hidden_sprite")
 local Theme = require("src/utils/theme")
 
 local SpriteGrid = {}
@@ -27,13 +28,6 @@ function SpriteGrid.RowGap(height)
     return math.max(MINIMUM_ROW_GAP, math.floor(spare / (SpriteGrid.ROWS - 1)))
 end
 
-function SpriteGrid.Height(rowGap)
-    return SpriteGrid.ROWS * SpriteGrid.TILE_HEIGHT + (SpriteGrid.ROWS - 1) * rowGap
-end
-
-local HIDDEN_SOURCE = {}
-local HIDDEN_OPTIONS = { placeholder = false }
-
 local function buildTile(parent, origin, rowGap, position, onSelect)
     local column = (position - 1) % SpriteGrid.COLUMNS
     local row = math.floor((position - 1) / SpriteGrid.COLUMNS)
@@ -51,7 +45,7 @@ local function buildTile(parent, origin, rowGap, position, onSelect)
     Client.OnClick(tile.square, CLICK_KEY_PREFIX .. position, function()
         onSelect(position)
     end)
-    tile.sprite = Client.Call("drawing a tile sprite", rsprite.Draw, parent, HIDDEN_SOURCE, {
+    tile.sprite = Client.Call("drawing a tile sprite", rsprite.Draw, parent, HiddenSprite.SOURCE, {
         x = x + math.floor((SpriteGrid.TILE_WIDTH - SpriteGrid.SPRITE_SIZE) / 2),
         y = y + math.floor((SpriteGrid.TILE_HEIGHT - SpriteGrid.SPRITE_SIZE) / 2),
         size = SpriteGrid.SPRITE_SIZE,
@@ -97,8 +91,8 @@ local function hideTile(tile)
         "hiding a tile sprite",
         rsprite.SetSource,
         tile.sprite,
-        HIDDEN_SOURCE,
-        HIDDEN_OPTIONS
+        HiddenSprite.SOURCE,
+        HiddenSprite.OPTIONS
     )
 end
 
@@ -111,6 +105,7 @@ function SpriteGrid.New(parent, origin, onSelect)
     function grid.Show(results, selectedPosition)
         for position, tile in ipairs(grid.tiles) do
             local result = results[position]
+            tile.showing = result ~= nil
             if result == nil then
                 hideTile(tile)
             else
@@ -122,8 +117,17 @@ function SpriteGrid.New(parent, origin, onSelect)
         end
     end
 
+    function grid.ShowSelection(selectedPosition)
+        for position, tile in ipairs(grid.tiles) do
+            if tile.showing then
+                Client.Set(tile.border, "hidden", position ~= selectedPosition)
+            end
+        end
+    end
+
     function grid.Hide()
         for _, tile in ipairs(grid.tiles) do
+            tile.showing = false
             hideTile(tile)
         end
     end

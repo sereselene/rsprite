@@ -9,8 +9,8 @@ local SETTINGS_KEY = "rsprite-finder:settings"
 
 local subscribed = false
 
-local function onOptionChanged(value, selected)
-    if FinderOptions.Set(value, selected) then
+local function onOptionChanged(optionName, selected)
+    if FinderOptions.Set(optionName, selected) then
         FinderWindow.OptionsChanged()
     end
 end

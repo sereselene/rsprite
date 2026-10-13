@@ -2,6 +2,21 @@
 
 Everything notable that changes in rsprite lands here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - Unreleased
+
+### Changed
+
+- `rsprite.Get` and `rsprite.Name` raise an error at your line for an argument of the wrong type. Passing `nil` still gives `nil`.
+- `rsprite.Draw`, `rsprite.SetSource`, `rsprite.DrawItem` and `rsprite.SetItem` raise an error for a table that isn't a component, with a hint to pass the component itself, such as a window's content.
+- The finder only searches again when the search or the tag changes. Changing an option, favourites only or a star reuses the results.
+- Clicking a tile in the finder only updates the selection and the detail panel.
+
+### Fixed
+
+- A sprite lookup that fails is tried again next time, instead of being remembered as missing.
+- If the finder window can't be built, it warns once and starts from scratch the next time you open it.
+- The finder warns once per setting when it can't save.
+
 ## [0.1.0] - 2026-10-13
 
 The first release, built against client `950-1`.

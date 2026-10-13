@@ -67,14 +67,19 @@ FinderWindow.PAGING_WIDTH = PAGING_WIDTH
 FinderWindow.LEFT_COLUMN_X = MARGIN
 FinderWindow.DETAIL_X = DETAIL_X
 FinderWindow.LEFT_COLUMN_WIDTH = SpriteGrid.WIDTH
-FinderWindow.GRID_Y = GRID_Y
-FinderWindow.GRID_HEIGHT = GRID_HEIGHT
 FinderWindow.PAGING_GAP = PAGING_GAP
 
 FinderWindow.WIDTH = WIDTH
 FinderWindow.HEIGHT = HEIGHT
 local SPINNER_SIZE = 48
 local MESSAGE_WIDTH = SpriteGrid.WIDTH
+local RESULTS_TEXT_OFFSET = 6
+local PAGE_TEXT_OFFSET = 4
+local SPINNER_OFFSET = 40
+local LOADING_TEXT_GAP = 8
+local EMPTY_TITLE_OFFSET = 8
+local EMPTY_HINT_OFFSET = 28
+local CLEAR_BUTTON_OFFSET = 52
 
 local finder = nil
 local state = nil
@@ -142,7 +147,7 @@ local function showEmpty(visible)
             function()
                 FinderWindow.ClearFilters()
             end,
-            { x = MARGIN, y = GRID_Y + 52, variant = "neutral" }
+            { x = MARGIN, y = GRID_Y + CLEAR_BUTTON_OFFSET, variant = "neutral" }
         )
     elseif not wantsClearButton and finder.clearButton ~= nil then
         local button = finder.clearButton
@@ -257,7 +262,8 @@ local function selectPosition(position)
     if tile ~= state.selectedTile then
         FinderState.Select(state, tile, 1)
     end
-    render()
+    finder.grid.ShowSelection(position)
+    showDetail()
     save()
 end
 
@@ -306,7 +312,7 @@ local function showLoading(visible)
     if visible and finder.spinner == nil then
         finder.spinner = Client.Call("creating the spinner", prettyui.Spinner.new, finder.content, {
             x = MARGIN + math.floor((SpriteGrid.WIDTH - SPINNER_SIZE) / 2),
-            y = GRID_Y + 40,
+            y = GRID_Y + SPINNER_OFFSET,
             size = SPINNER_SIZE,
         })
     elseif not visible and finder.spinner ~= nil then
@@ -336,11 +342,127 @@ local function onClosed()
     save()
 end
 
-local function addText(layout)
+local function addText(content, layout)
     layout.font = layout.font or bodyFont()
     layout.colour = layout.colour or Theme.TEXT
     layout.height = layout.height or LINE_HEIGHT
-    return Client.NewText(finder.content, layout)
+    return Client.NewText(content, layout)
+end
+
+local function buildParts(window)
+    local parts = { window = window, content = window.content, indexReady = false }
+    local content = parts.content
+
+    parts.searchField = TextBox.New(content, {
+        x = MARGIN,
+        y = MARGIN,
+        width = SEARCH_WIDTH,
+        height = FIELD_HEIGHT,
+        placeholder = SEARCH_PLACEHOLDER,
+        clearTooltip = FinderWindow.CLEAR_SEARCH_TOOLTIP,
+    }, onSearchTyped, onSearchCleared)
+
+    parts.tagOptions = TagOptions.Build(Client.Call("reading tags", rsprite.Tags))
+    parts.tagBox = DropDown.New(
+        content,
+        { x = TAG_X, y = MARGIN, width = TAG_WIDTH, height = FIELD_HEIGHT },
+        parts.tagOptions.entries,
+        TagOptions.PositionFor(parts.tagOptions, state.tag),
+        onTagChosen
+    )
+    parts.favouritesButton = Client.Call(
+        "creating the favourites only button",
+        prettyui.SpriteButton.new,
+        content,
+        "STAR",
+        function(_, enabled)
+            setFavouritesOnly(enabled)
+        end,
+        {
+            x = FAVOURITES_X,
+            y = MARGIN + math.floor((FIELD_HEIGHT - DetailPanel.CONTROL_SIZE) / 2),
+            size = DetailPanel.CONTROL_SIZE,
+            toggleable = true,
+            disabled = not favourites.only,
+            tooltip = FinderWindow.FAVOURITES_ONLY_TOOLTIP,
+        }
+    )
+
+    parts.resultsText = addText(content, {
+        x = RESULTS_X,
+        y = MARGIN + RESULTS_TEXT_OFFSET,
+        width = RESULTS_WIDTH,
+        colour = Theme.MUTED,
+    })
+
+    parts.grid =
+        SpriteGrid.New(content, { x = MARGIN, y = GRID_Y, height = GRID_HEIGHT }, selectPosition)
+
+    parts.previousButton = Client.Call(
+        "creating the previous page button",
+        prettyui.SpriteButton.new,
+        content,
+        "ARROW_LEFT",
+        function()
+            changePage(-1)
+        end,
+        { x = PAGING_X, y = PAGING_Y, size = ARROW_SIZE }
+    )
+    parts.pageText = addText(content, {
+        x = PAGE_TEXT_X,
+        y = PAGING_Y + PAGE_TEXT_OFFSET,
+        width = PAGE_TEXT_WIDTH,
+        centred = true,
+    })
+    parts.nextButton = Client.Call(
+        "creating the next page button",
+        prettyui.SpriteButton.new,
+        content,
+        "ARROW_RIGHT",
+        function()
+            changePage(1)
+        end,
+        { x = NEXT_ARROW_X, y = PAGING_Y, size = ARROW_SIZE }
+    )
+
+    parts.detail = DetailPanel.New(content, { x = DETAIL_X, y = MARGIN, width = DETAIL_WIDTH }, {
+        onPreviewSize = setPreviewSize,
+        onStepVariant = stepVariant,
+        onStar = setStarred,
+        onCycleBackground = cycleBackground,
+    })
+
+    parts.loadingText = addText(content, {
+        x = MARGIN,
+        y = GRID_Y + SPINNER_OFFSET + SPINNER_SIZE + LOADING_TEXT_GAP,
+        width = MESSAGE_WIDTH,
+        text = FinderWindow.LOADING_TEXT,
+        centred = true,
+        hidden = true,
+    })
+    parts.emptyTitle = addText(content, {
+        x = MARGIN,
+        y = GRID_Y + EMPTY_TITLE_OFFSET,
+        width = MESSAGE_WIDTH,
+        text = FinderWindow.EMPTY_TITLE,
+        colour = Theme.GOLD,
+        hidden = true,
+    })
+    parts.emptyHint = addText(content, {
+        x = MARGIN,
+        y = GRID_Y + EMPTY_HINT_OFFSET,
+        width = MESSAGE_WIDTH,
+        text = FinderWindow.EMPTY_HINT,
+        colour = Theme.MUTED,
+        hidden = true,
+    })
+    return parts
+end
+
+local function destroyWindow(window)
+    Client.Call("destroying the finder window", function()
+        window:Destroy()
+    end)
 end
 
 local function build()
@@ -362,108 +484,12 @@ local function build()
     if window == nil then
         return false
     end
-    finder = { window = window, content = window.content, indexReady = false }
-    local content = finder.content
-
-    finder.searchField = TextBox.New(content, {
-        x = MARGIN,
-        y = MARGIN,
-        width = SEARCH_WIDTH,
-        height = FIELD_HEIGHT,
-        placeholder = SEARCH_PLACEHOLDER,
-        clearTooltip = FinderWindow.CLEAR_SEARCH_TOOLTIP,
-    }, onSearchTyped, onSearchCleared)
-
-    finder.tagOptions = TagOptions.Build(Client.Call("reading tags", rsprite.Tags))
-    finder.tagBox = DropDown.New(
-        content,
-        { x = TAG_X, y = MARGIN, width = TAG_WIDTH, height = FIELD_HEIGHT },
-        finder.tagOptions.entries,
-        TagOptions.PositionFor(finder.tagOptions, state.tag),
-        onTagChosen
-    )
-    finder.favouritesButton = Client.Call(
-        "creating the favourites only button",
-        prettyui.SpriteButton.new,
-        content,
-        "STAR",
-        function(_, enabled)
-            setFavouritesOnly(enabled)
-        end,
-        {
-            x = FAVOURITES_X,
-            y = MARGIN + math.floor((FIELD_HEIGHT - DetailPanel.CONTROL_SIZE) / 2),
-            size = DetailPanel.CONTROL_SIZE,
-            toggleable = true,
-            disabled = not favourites.only,
-            tooltip = FinderWindow.FAVOURITES_ONLY_TOOLTIP,
-        }
-    )
-
-    finder.resultsText =
-        addText({ x = RESULTS_X, y = MARGIN + 6, width = RESULTS_WIDTH, colour = Theme.MUTED })
-
-    finder.grid =
-        SpriteGrid.New(content, { x = MARGIN, y = GRID_Y, height = GRID_HEIGHT }, selectPosition)
-
-    finder.previousButton = Client.Call(
-        "creating the previous page button",
-        prettyui.SpriteButton.new,
-        content,
-        "ARROW_LEFT",
-        function()
-            changePage(-1)
-        end,
-        { x = PAGING_X, y = PAGING_Y, size = ARROW_SIZE }
-    )
-    finder.pageText = addText({
-        x = PAGE_TEXT_X,
-        y = PAGING_Y + 4,
-        width = PAGE_TEXT_WIDTH,
-        centred = true,
-    })
-    finder.nextButton = Client.Call(
-        "creating the next page button",
-        prettyui.SpriteButton.new,
-        content,
-        "ARROW_RIGHT",
-        function()
-            changePage(1)
-        end,
-        { x = NEXT_ARROW_X, y = PAGING_Y, size = ARROW_SIZE }
-    )
-
-    finder.detail = DetailPanel.New(content, { x = DETAIL_X, y = MARGIN, width = DETAIL_WIDTH }, {
-        onPreviewSize = setPreviewSize,
-        onStepVariant = stepVariant,
-        onStar = setStarred,
-        onCycleBackground = cycleBackground,
-    })
-
-    finder.loadingText = addText({
-        x = MARGIN,
-        y = GRID_Y + 40 + SPINNER_SIZE + 8,
-        width = MESSAGE_WIDTH,
-        text = FinderWindow.LOADING_TEXT,
-        centred = true,
-        hidden = true,
-    })
-    finder.emptyTitle = addText({
-        x = MARGIN,
-        y = GRID_Y + 8,
-        width = MESSAGE_WIDTH,
-        text = FinderWindow.EMPTY_TITLE,
-        colour = Theme.GOLD,
-        hidden = true,
-    })
-    finder.emptyHint = addText({
-        x = MARGIN,
-        y = GRID_Y + 28,
-        width = MESSAGE_WIDTH,
-        text = FinderWindow.EMPTY_HINT,
-        colour = Theme.MUTED,
-        hidden = true,
-    })
+    local parts = Client.Call("building the finder window", buildParts, window)
+    if parts == nil then
+        destroyWindow(window)
+        return false
+    end
+    finder = parts
     return true
 end
 
@@ -536,9 +562,7 @@ function FinderWindow.Destroy()
     if finder ~= nil then
         local window = finder.window
         finder = nil
-        Client.Call("destroying the finder window", function()
-            window:Destroy()
-        end)
+        destroyWindow(window)
     end
     state = nil
     favourites = nil

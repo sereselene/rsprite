@@ -64,4 +64,31 @@ FinderFakes.Choose(client, dropDown, "icon")
 check.Same("choosing an entry reports its id", chosen, { 2 })
 check.Equal("the choice stays selected", dropDown.SelectedId(), 2)
 
+client.raiseOnSetEntries = true
+DropDown.New(parent, { x = 0, y = 0, width = 140, height = 28 }, entries, 1, function() end)
+DropDown.New(parent, { x = 0, y = 0, width = 140, height = 28 }, entries, 1, function() end)
+check.Equal(
+    "a failure filling the entries warns once in plain words",
+    client.WarningsMentioning("rsprite-finder: filling a dropdown failed"),
+    1
+)
+client.raiseOnSetEntries = false
+
+local brokenDropDown = DropDown.New(
+    parent,
+    { x = 0, y = 0, width = 140, height = 28 },
+    entries,
+    1,
+    function()
+        error("the choice handler broke")
+    end
+)
+FinderFakes.Choose(client, brokenDropDown, "icon")
+FinderFakes.Choose(client, brokenDropDown, "skill")
+check.Equal(
+    "a raising choice handler warns once in plain words",
+    client.WarningsMentioning("rsprite-finder: handling a dropdown choice failed"),
+    1
+)
+
 check.Finish()

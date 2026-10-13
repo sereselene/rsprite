@@ -171,7 +171,7 @@ check.Equal("a saved size of 64 is restored", FinderState.New({ previewSize = 64
 
 check.Equal(
     "the copy text is exactly the Get line",
-    FinderState.CopyText("SKILL_ATTACK"),
+    FinderState.GetText("SKILL_ATTACK"),
     'rsprite.Get("SKILL_ATTACK")'
 )
 check.Equal(
@@ -283,9 +283,23 @@ check.Equal("a new query searches again", searchCalls.count, 2)
 FinderState.SetTag(cached, "even")
 FinderState.Refresh(cached, counted, NO_OPTIONS, SEARCH_CHANGED)
 check.Equal("a new tag searches again", searchCalls.count, 3)
+local totalBeforeOption = cached.total
 FinderState.Invalidate(cached)
-FinderState.Refresh(cached, counted, NO_OPTIONS, FinderState.OPTIONS_CHANGED)
-check.Equal("a changed option searches again", searchCalls.count, 4)
+FinderState.Refresh(cached, counted, { groupVariants = true }, FinderState.OPTIONS_CHANGED)
+check.Equal("a changed option reuses the search", searchCalls.count, 3)
+check.Equal("a changed option still rebuilds the tiles", cached.total, 1)
+check.Check(
+    "a changed option changes the count",
+    cached.total ~= totalBeforeOption,
+    totalBeforeOption
+)
+FinderState.Invalidate(cached)
+FinderState.Refresh(cached, counted, { favourites = { "NAME_6" } }, FinderState.OPTIONS_CHANGED)
+check.Equal("favourites only reuses the search", searchCalls.count, 3)
+check.Equal("favourites only shows the starred tile", cached.tiles[1].name, "NAME_6")
+FinderState.SetQuery(cached, "name_1")
+FinderState.Refresh(cached, counted, NO_OPTIONS, SEARCH_CHANGED)
+check.Equal("a new query after an option change searches again", searchCalls.count, 4)
 
 local GROUPED = { groupVariants = true, hideClutter = true }
 local familyNames = {

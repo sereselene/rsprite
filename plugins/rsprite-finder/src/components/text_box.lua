@@ -12,6 +12,7 @@ local CLEAR_GAP = 4
 
 TextBox.CLEAR_ROOM = ClearButton.SIZE + CLEAR_GAP
 local CHANGE_KEY = "rsprite-finder:text-box"
+local TYPING_LABELS = { listening = "listening for typing", handling = "handling typing" }
 
 function TextBox.New(parent, layout, onChange, onClear)
     local box = {}
@@ -65,11 +66,17 @@ function TextBox.New(parent, layout, onChange, onClear)
         end)
     end
 
-    Client.OnHook(box.component, "ONCONTENTCHANGED", CHANGE_KEY, function(_, _, content)
-        local text = content or box.GetText()
-        showClearButton(text)
-        onChange(text)
-    end)
+    Client.OnHook(
+        box.component,
+        "ONCONTENTCHANGED",
+        CHANGE_KEY,
+        TYPING_LABELS,
+        function(_, _, content)
+            local text = content or box.GetText()
+            showClearButton(text)
+            onChange(text)
+        end
+    )
 
     return box
 end

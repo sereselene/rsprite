@@ -168,8 +168,16 @@ check.Equal(
     "3 favourites"
 )
 
+local findCalls = 0
+local find = rsprite.Find
+rsprite.Find = function(...)
+    findCalls = findCalls + 1
+    return find(...)
+end
 client.Click(finder.grid.tiles[1].square)
 detail.star:Click()
+rsprite.Find = find
+check.Equal("unstarring in favourites only reuses the search", findCalls, 0)
 check.Equal(
     "unstarring in favourites only removes the tile",
     finder.resultsText.content,

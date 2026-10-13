@@ -24,9 +24,13 @@ check.Equal("Name works", rsprite.Name(9318), "SKILL_ATTACK")
 check.Equal("Resolve works", rsprite.Resolve({ "MISSING", "SKILL_MAGIC" }), 33454)
 local entries, total = rsprite.Find("attack")
 check.Check("Find works", total >= 1 and entries[1].name == "SKILL_ATTACK", total)
-local sprite, index = rsprite.Draw({}, "SKILL_ATTACK")
+local sprite, index = rsprite.Draw(client.NewComponent("layer"), "SKILL_ATTACK")
 check.Check("Draw works", sprite ~= nil and index == 1, tostring(index))
-check.Check("DrawItem works", rsprite.DrawItem({}, ClientFakes.ITEM_ID) ~= nil, "drawn")
+check.Check(
+    "DrawItem works",
+    rsprite.DrawItem(client.NewComponent("layer"), ClientFakes.ITEM_ID) ~= nil,
+    "drawn"
+)
 
 PluginShutdown()
 check.Equal("PluginShutdown leaves nothing subscribed", client.SubscriptionCount(), 0)

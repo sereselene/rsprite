@@ -136,7 +136,7 @@ The first search takes a moment while rsprite reads the sprite names. To spread 
 
 Anything rsprite can't find comes back as `nil`, so `if spriteId then` is all the checking you need. rsprite also prints one `rsprite:` warning for each missing name, so typos show up in the console.
 
-Mistakes in how you call rsprite raise an error that points at your own line. That includes a `nil` parent, an unknown option, an option of the wrong type, a size of 0 or below, a position, anchor or size that isn't a finite number, and a quantity that isn't a whole number 0 or above. Problems at runtime, such as a sprite that doesn't exist, never raise.
+Mistakes in how you call rsprite raise an error that points at your own line. That includes a `nil` parent, a table where a component belongs, a name for `Get` that isn't a string, an id for `Name` that isn't a number, an unknown option, an option of the wrong type, a size of 0 or below, a position, anchor or size that isn't a finite number, and a quantity that isn't a whole number 0 or above. For a table, the error reminds you to pass the component itself, such as a window's content. Passing `nil` to `Get` or `Name` isn't a mistake: it gives `nil`, with no warning. Problems at runtime, such as a sprite that doesn't exist, never raise.
 
 If the function you pass to `BuildIndex` raises an error, rsprite prints one warning with the error, skips that function from then on, and still finishes the index.
 
@@ -181,6 +181,8 @@ The finder's settings cog has two options, both on by default. Changes apply to 
 Favourites always show exactly what you starred, whatever the options are set to, including the exact variant. If a game update removes a sprite you starred, it's hidden but kept in your list in case it returns.
 
 The finder remembers your search, tag, page, selection, preview size, preview background, favourites and options between sessions. The first time you open it, it takes a moment to read the sprite names before the grid fills in.
+
+The finder prints its own warnings with the `rsprite-finder:` prefix.
 
 ## Using rsprite with PrettyUI
 

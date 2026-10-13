@@ -217,7 +217,7 @@ group = latestGroup()
 local searchesBefore = findCalls
 group:Toggle(FinderOptions.GROUP_VARIANTS)
 check.Equal("turning grouping off applies straight away", finder.resultsText.content, "159 sprites")
-check.Equal("an option change searches again", findCalls, searchesBefore + 1)
+check.Equal("an option change reuses the results", findCalls, searchesBefore)
 check.Equal("the selection survives the change", state.selectedName, "ATTACKING_RETICULE_FRAME_3")
 check.Equal("the page follows the selection", finder.pageText.content, "Page 6 of 6")
 check.Equal("ungrouped sprites have no stepper", detail.variantText.hidden, true)

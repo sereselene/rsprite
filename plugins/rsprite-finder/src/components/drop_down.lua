@@ -7,6 +7,8 @@ DropDown.ENTRY_HEIGHT = 20
 DropDown.VISIBLE_ENTRIES = 10
 
 local CHANGE_KEY = "rsprite-finder:drop-down"
+local CHOICE_LABELS =
+    { listening = "listening for dropdown choices", handling = "handling a dropdown choice" }
 
 function DropDown.New(parent, layout, entries, selectedId, onChoose)
     local dropDown = {}
@@ -30,12 +32,12 @@ function DropDown.New(parent, layout, entries, selectedId, onChoose)
     for _, entry in ipairs(entries) do
         idByLabel[entry.label] = entry.id
     end
-    Client.Call("filling a drop-down", function()
+    Client.Call("filling a dropdown", function()
         dropDown.component:SetEntries(idByLabel, selectedId)
     end)
 
     function dropDown.SelectedId()
-        return Client.Call("reading a drop-down", function()
+        return Client.Call("reading a dropdown", function()
             if dropDown.component.hasSelection then
                 return dropDown.component.selectedID
             end
@@ -44,15 +46,21 @@ function DropDown.New(parent, layout, entries, selectedId, onChoose)
     end
 
     function dropDown.Select(entryId)
-        Client.Call("selecting a drop-down entry", function()
+        Client.Call("selecting a dropdown entry", function()
             dropDown.component:Select(entryId, false)
         end)
     end
 
-    Client.OnHook(dropDown.component, "ONSELECTIONCHANGED", CHANGE_KEY, function(_, entryId)
-        onChoose(dropDown.SelectedId() or entryId)
-        return false
-    end)
+    Client.OnHook(
+        dropDown.component,
+        "ONSELECTIONCHANGED",
+        CHANGE_KEY,
+        CHOICE_LABELS,
+        function(_, entryId)
+            onChoose(dropDown.SelectedId() or entryId)
+            return false
+        end
+    )
 
     return dropDown
 end

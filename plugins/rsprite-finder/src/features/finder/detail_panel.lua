@@ -2,6 +2,7 @@ local Client = require("src/services/client")
 local SizeButtons = require("src/components/size_buttons")
 local TextBox = require("src/components/text_box")
 local FinderState = require("src/features/finder/finder_state")
+local HiddenSprite = require("src/utils/hidden_sprite")
 local TextFit = require("src/utils/text_fit")
 local Theme = require("src/utils/theme")
 
@@ -38,9 +39,7 @@ DetailPanel.ADD_FAVOURITE = "Add to favourites"
 DetailPanel.REMOVE_FAVOURITE = "Remove from favourites"
 DetailPanel.BACKGROUND_TOOLTIP = "Preview background"
 DetailPanel.CHECKER_RESOURCE = "checker"
-DetailPanel.PREVIEW_BOX = PREVIEW_BOX
 DetailPanel.CONTROL_SIZE = CONTROL_SIZE
-DetailPanel.BACKGROUND_BUTTON_SIZE = BACKGROUND_BUTTON_SIZE
 
 DetailPanel.HEIGHT = PREVIEW_BOX
     + VARIANT_GAP
@@ -54,9 +53,6 @@ DetailPanel.HEIGHT = PREVIEW_BOX
     + SECTION_GAP
     + #COPY_LABELS * COPY_ROW_HEIGHT
     + HINT_HEIGHT
-
-local HIDDEN_SOURCE = {}
-local HIDDEN_OPTIONS = { placeholder = false }
 
 local function joined(items)
     if items == nil or #items == 0 then
@@ -84,7 +80,7 @@ end
 local function copyTexts(name, previewSize)
     return {
         Name = name,
-        Get = FinderState.CopyText(name),
+        Get = FinderState.GetText(name),
         Draw = FinderState.DrawText(name, previewSize),
         PrettyUI = FinderState.PrettyText(name, previewSize),
     }
@@ -140,7 +136,7 @@ function DetailPanel.New(parent, layout, handlers)
     for _, size in ipairs(FinderState.PREVIEW_SIZES) do
         local offset = math.floor((PREVIEW_BOX - size) / 2)
         panel.previews[size] =
-            Client.Call("drawing a preview", rsprite.Draw, parent, HIDDEN_SOURCE, {
+            Client.Call("drawing a preview", rsprite.Draw, parent, HiddenSprite.SOURCE, {
                 x = boxX + offset,
                 y = y + offset,
                 size = size,
@@ -358,8 +354,8 @@ function DetailPanel.New(parent, layout, handlers)
                     "hiding a preview",
                     rsprite.SetSource,
                     preview,
-                    HIDDEN_SOURCE,
-                    HIDDEN_OPTIONS
+                    HiddenSprite.SOURCE,
+                    HiddenSprite.OPTIONS
                 )
             end
         end

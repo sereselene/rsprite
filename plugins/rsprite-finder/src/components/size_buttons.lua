@@ -78,8 +78,8 @@ local function buildButton(parent, layout, label, font, cursorId)
         font = font,
         colour = SizeButtons.TEXT_COLOUR,
         centred = true,
+        centredVertically = true,
     })
-    Client.Set(button.label, "alignVertical", ui.AlignMode.CENTRE)
     Client.Set(button.label, "isShadowed", true)
     Client.SetHoverCursor(button.root, cursorId)
     return button
@@ -106,20 +106,38 @@ function SizeButtons.New(parent, layout, sizes, onSelect)
         }, tostring(size), font, cursorId)
         button.size = size
         group.buttons[position] = button
-        Client.OnHook(button.root, "ONMOUSEOVER", CLICK_KEY_PREFIX .. size, function()
-            button.hovered = true
-            paint(button)
-            return true
-        end)
-        Client.OnHook(button.root, "ONMOUSELEAVE", CLICK_KEY_PREFIX .. size, function()
-            button.hovered = false
-            paint(button)
-            return true
-        end)
-        Client.OnHook(button.root, "ONCLICK", CLICK_KEY_PREFIX .. size, function()
-            onSelect(size)
-            return false
-        end)
+        Client.OnHook(
+            button.root,
+            "ONMOUSEOVER",
+            CLICK_KEY_PREFIX .. size,
+            Client.MOUSE_ENTER_LABELS,
+            function()
+                button.hovered = true
+                paint(button)
+                return true
+            end
+        )
+        Client.OnHook(
+            button.root,
+            "ONMOUSELEAVE",
+            CLICK_KEY_PREFIX .. size,
+            Client.MOUSE_LEAVE_LABELS,
+            function()
+                button.hovered = false
+                paint(button)
+                return true
+            end
+        )
+        Client.OnHook(
+            button.root,
+            "ONCLICK",
+            CLICK_KEY_PREFIX .. size,
+            Client.CLICK_LABELS,
+            function()
+                onSelect(size)
+                return false
+            end
+        )
         paint(button)
     end
 
