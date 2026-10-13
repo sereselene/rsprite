@@ -1,21 +1,18 @@
 selftest.UsePlugin("rsprite-finder")
 
-local ClientFakes = require("tests/support/client_fakes")
 local FinderFakes = require("tests/support/finder_fakes")
 local Report = require("tests/support/report")
 
 local check = Report.New("favourites")
-local sprites = ClientFakes.DefaultSprites()
-for position, name in ipairs({
-    "ATTACKING_RETICULE_FRAME_2",
-    "ATTACKING_RETICULE_FRAME_1",
-    "ATTACKING_RETICULE_FRAME_3",
-    "LOBBY_BANNER_FR",
-    "LOBBY_BANNER_EN",
-}) do
-    sprites[#sprites + 1] = { 36699 + position, name }
-end
-local client, prettyuiFake = FinderFakes.Install({ sprites = sprites })
+local client, prettyuiFake = FinderFakes.Install({
+    sprites = FinderFakes.SpritesWith({
+        "ATTACKING_RETICULE_FRAME_2",
+        "ATTACKING_RETICULE_FRAME_1",
+        "ATTACKING_RETICULE_FRAME_3",
+        "LOBBY_BANNER_FR",
+        "LOBBY_BANNER_EN",
+    }),
+})
 local Favourites = require("src/features/finder/favourites")
 local FinderOptions = require("src/features/finder/finder_options")
 local FinderWindow = require("src/features/finder/finder_window")
@@ -42,12 +39,6 @@ FinderFakes.TicksUntil(client, function()
 end, 40)
 local finder, state = FinderWindow.Parts()
 local detail = finder.detail
-
-local function clearButton()
-    return prettyuiFake.Find("fancyButtons", function(button)
-        return button.text == FinderWindow.CLEAR_LABEL and not button.destroyed
-    end)
-end
 
 local function select(name)
     local tilePosition = ResultList.Locate(state.results, name)
@@ -79,7 +70,11 @@ check.Equal(
     "Star a sprite to keep it here."
 )
 check.Equal("the empty message is shown", finder.emptyTitle.hidden, false)
-check.Equal("there is nothing to clear", clearButton(), nil)
+check.Equal(
+    "there is nothing to clear",
+    FinderFakes.LiveFancyButton(prettyuiFake, FinderWindow.CLEAR_LABEL),
+    nil
+)
 check.Same(
     "a favourite missing on this client is kept",
     Favourites.Decode(client.stored.rsprite_finder_favourites.names),
@@ -156,7 +151,11 @@ check.Equal(
     finder.emptyTitle.content,
     FinderWindow.EMPTY_TITLE
 )
-check.Check("a search that misses every favourite can be cleared", clearButton() ~= nil, "clear")
+check.Check(
+    "a search that misses every favourite can be cleared",
+    FinderFakes.LiveFancyButton(prettyuiFake, FinderWindow.CLEAR_LABEL) ~= nil,
+    "clear"
+)
 FinderWindow.ClearFilters()
 FinderFakes.Type(client, finder.searchField, "lobby")
 FinderFakes.TicksUntil(client, function()

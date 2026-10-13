@@ -197,4 +197,45 @@ check.Raises("a non-function onReady raises", function()
     app.Public.BuildIndex("soon")
 end, "rsprite.BuildIndex: onReady must be a function, got string", SOURCE)
 
+client, app, NameIndex = freshIndex()
+client.raiseOnFromIdFor[10] = true
+local skipping = NameIndex.Entries()
+local skippedNames = {}
+for _, name in ipairs(skipping.names) do
+    skippedNames[name] = true
+end
+check.Equal("a raising lookup leaves out only that name", #skipping.names, expectedNames - 1)
+check.Equal("the name whose lookup raised is missing", skippedNames.NAME_10, nil)
+check.Equal("the walk carries on past a raising lookup", skippedNames.NAME_11, true)
+check.Equal("the walk still reaches the highest id", skipping.ids[#skipping.ids], HIGHEST_ID)
+
+client, app = freshIndex()
+client.raiseOnFromId = true
+local emptyEntries, emptyTotal = app.Public.Find("name")
+check.Equal("Find on an index whose lookups all raise gives no entries", #emptyEntries, 0)
+check.Equal("Find on an index whose lookups all raise gives a total of 0", emptyTotal, 0)
+app.Public.Find("name")
+check.Equal("the index is ready even when every lookup raised", app.Public.IsIndexReady(), true)
+check.Equal("an empty index warns once", client.WarningsMentioning("came back empty"), 1)
+
+client, app = freshIndex()
+client.raiseOnEventSubscribe = true
+local fallbackReady = 0
+local fallbackNames = nil
+app.Public.BuildIndex(function(nameCount)
+    fallbackReady = fallbackReady + 1
+    fallbackNames = nameCount
+end)
+check.Equal(
+    "a failed subscription warns that the index was built in one go",
+    client.WarningsMentioning(
+        "building the name index across ticks failed, so it was built in one go"
+    ),
+    1
+)
+check.Equal("a failed subscription still makes the index ready", app.Public.IsIndexReady(), true)
+check.Equal("a failed subscription still calls onReady once", fallbackReady, 1)
+check.Equal("a failed subscription still counts every name", fallbackNames, expectedNames)
+check.Equal("a failed subscription leaves nothing subscribed", client.SubscriptionCount(), 0)
+
 check.Finish()

@@ -2,7 +2,7 @@
 
 Find and draw any RS3 sprite in one line.
 
-> **Status:** early development. rsprite is not on the Plugin Hub yet. Version 0.1.0 is being tested against game client 950-1.
+> **Status:** early development. rsprite is not on the Plugin Hub yet. Tested against game client `950-1`.
 
 ![The rsprite finder window, with a grid of sprite previews beside the details and copy boxes for the selected sprite](docs/images/finder.png)
 
@@ -18,7 +18,7 @@ rsprite is not on the Plugin Hub yet, so for now you install it by hand.
 
 Either:
 
-- **Download a release.** Get `rsprite-0.1.0.zip` from the [latest release](https://github.com/sereselene/rsprite/releases) and unzip it into the folder your game client loads development plugins from.
+- **Download a release.** Get the `rsprite` zip from the [latest release](https://github.com/sereselene/rsprite/releases) and unzip it into the folder your game client loads development plugins from.
 - **Or clone the repository**, then copy the `plugins/rsprite` folder into that same plugins folder. This gives you the latest code on `main` rather than a tested release.
 
 Either way, the `rsprite` folder should sit next to your own plugin's folder.
@@ -63,17 +63,17 @@ local ring = rsprite.DrawItem(parent, 13562, { x = 40, y = 10, size = 24 })
 
 | Function | What it does |
 | --- | --- |
-| `rsprite.version` | The library version, such as `"0.1.0"`. |
+| `rsprite.version` | The library version, as a string in the form `"X.Y.Z"`. |
 | `rsprite.Get(name)` | The sprite id for a name, or `nil`. Not case sensitive. Results are cached. |
 | `rsprite.Name(id)` | The sprite name for an id, or `nil`. Results are cached. |
 | `rsprite.Resolve(nameOrChain)` | The first source in a chain that exists and its position in the chain, or `nil`. |
 | `rsprite.Draw(parent, nameOrChain, options)` | Creates a new `ui.Sprite` showing the first source that exists. Returns the sprite and the position used. |
-| `rsprite.SetSource(sprite, nameOrChain, options)` | Changes an existing sprite to a new chain, clearing any item icon it showed. Returns the position used. |
+| `rsprite.SetSource(sprite, nameOrChain, options)` | Changes an existing sprite to a new chain, clearing any item icon rsprite drew on it with `DrawItem` or `SetItem`. Returns the position used. |
 | `rsprite.DrawItem(parent, itemId, options)` | Creates a new `ui.Sprite` showing an item's icon. Returns the sprite. |
 | `rsprite.SetItem(sprite, itemId, options)` | Shows an item's icon on an existing sprite. Returns `true` if an item is shown, otherwise `false`. |
 | `rsprite.Find(text, options)` | Searches sprite names, tags and aliases. Returns the matching entries and the total number of matches. |
 | `rsprite.Tags()` | Every tag you can filter by, sorted alphabetically. |
-| `rsprite.BuildIndex(onReady)` | Prepares the search index over a few ticks, then calls `onReady` with the number of sprite names. |
+| `rsprite.BuildIndex(onReady)` | Prepares the search index over a few ticks, then calls `onReady` with the number of sprite names. If the index is already ready, it calls `onReady` straight away. |
 | `rsprite.IsIndexReady()` | Whether the search index is ready. |
 
 ### Chains
@@ -148,7 +148,7 @@ If the function you pass to `BuildIndex` raises an error, rsprite prints one war
 
 ## The finder
 
-rsprite comes with a separate plugin, `rsprite-finder`, for finding sprites while you build. Players never need it, so never list it as a dependency. To install it, unzip `rsprite-finder-0.1.0.zip` from the same release next to the `rsprite` folder, or copy `plugins/rsprite-finder` from a clone, then run `prl rsprite-finder` in the game's console. It needs rsprite and PrettyUI enabled.
+rsprite comes with a separate plugin, `rsprite-finder`, for finding sprites while you build. Players never need it, so never list it as a dependency. To install it, unzip the `rsprite-finder` zip from the same release next to the `rsprite` folder, or copy `plugins/rsprite-finder` from a clone, then run `prl rsprite-finder` in the game's console. It needs rsprite and PrettyUI enabled.
 
 Open the Plugin Hub's Manage list, click the finder's settings cog, and press **OPEN FINDER**. The window has:
 
@@ -210,7 +210,7 @@ You need Node 22.12 or later. StyLua and lefthook install platform specific bina
 | `npm run finder-images` | Regenerates the finder's images: the text box background and the preview checkerboard. |
 | `npm run dev-install -- --target <folder>` | Copies rsprite, the finder and the example plugin into the game's dev plugin folder. |
 | `npm run package` | Builds `rsprite-X.Y.Z.zip` and `rsprite-finder-X.Y.Z.zip` in `release`, using each `plugin.json` version. |
-| `npm run validate-tag -- v0.1.0` | Checks a release tag against each `plugin.json`, `rsprite.version` and the changelog. |
+| `npm run validate-tag -- vX.Y.Z` | Checks a release tag against each `plugin.json`, `rsprite.version` and the changelog. |
 
 `dev-install` can also read the target folder from the `RSPRITE_DEV_PLUGIN_FOLDER` environment variable. It only replaces its own `rsprite`, `rsprite-finder` and `rsprite-example` folders and won't touch anything else. After installing, run `prf` in the game's console, then `prl rsprite`, `prl rsprite-finder` and `prl rsprite-example`. Open the example's settings cog to see each feature drawn, or the finder's cog to start searching.
 

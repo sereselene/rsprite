@@ -5,6 +5,8 @@ local Report = require("tests/support/report")
 local check = Report.New("standards")
 
 local SCANNED_FOLDERS = { "plugins", "examples", "tests" }
+local SCANNED_FILES = { ".luacheckrc" }
+local LUA_FILES = { [".luacheckrc"] = true }
 local MAXIMUM_LINE_LENGTH = 200
 local BINARY_EXTENSIONS = { png = true }
 
@@ -64,34 +66,44 @@ local comments = {}
 local nonAscii = {}
 local longLines = {}
 local scanned = 0
+local scannedLua = {}
 
-for _, folder in ipairs(SCANNED_FOLDERS) do
-    for _, path in ipairs(selftest.ListFiles(folder)) do
-        if not BINARY_EXTENSIONS[extensionOf(path)] then
-            scanned = scanned + 1
-            local source = readWhole(path)
-            local badByte = string.find(source, "[\128-\255]")
-            if badByte then
-                nonAscii[#nonAscii + 1] = path .. ":" .. lineNumberAt(source, badByte)
-            end
-            local lineNumber = 0
-            for line in string.gmatch(source .. "\n", "([^\n]*)\n") do
-                lineNumber = lineNumber + 1
-                if #line > MAXIMUM_LINE_LENGTH then
-                    longLines[#longLines + 1] = path .. ":" .. lineNumber
-                end
-            end
-            if extensionOf(path) == "lua" then
-                local offset = commentOffset(source)
-                if offset then
-                    comments[#comments + 1] = path .. ":" .. lineNumberAt(source, offset)
-                end
-            end
+local function scanFile(path)
+    scanned = scanned + 1
+    local source = readWhole(path)
+    local badByte = string.find(source, "[\128-\255]")
+    if badByte then
+        nonAscii[#nonAscii + 1] = path .. ":" .. lineNumberAt(source, badByte)
+    end
+    local lineNumber = 0
+    for line in string.gmatch(source .. "\n", "([^\n]*)\n") do
+        lineNumber = lineNumber + 1
+        if #line > MAXIMUM_LINE_LENGTH then
+            longLines[#longLines + 1] = path .. ":" .. lineNumber
+        end
+    end
+    if extensionOf(path) == "lua" or LUA_FILES[path] then
+        scannedLua[path] = true
+        local offset = commentOffset(source)
+        if offset then
+            comments[#comments + 1] = path .. ":" .. lineNumberAt(source, offset)
         end
     end
 end
 
+for _, folder in ipairs(SCANNED_FOLDERS) do
+    for _, path in ipairs(selftest.ListFiles(folder)) do
+        if not BINARY_EXTENSIONS[extensionOf(path)] then
+            scanFile(path)
+        end
+    end
+end
+for _, path in ipairs(SCANNED_FILES) do
+    scanFile(path)
+end
+
 check.Check("files were scanned", scanned > 0, scanned)
+check.Equal("the Luacheck config is scanned as Lua", scannedLua[".luacheckrc"], true)
 check.Same("no Lua file has a comment outside strings", comments, {})
 check.Same("no file has a non-ASCII byte", nonAscii, {})
 check.Same("no line is over 200 characters", longLines, {})
