@@ -12,7 +12,20 @@ It has no dependencies, so you can use it with or without PrettyUI.
 
 ## Installing
 
-Add rsprite to the `requiredDependencies` in your plugin's `plugin.json`. While you develop against a local copy, use its folder name:
+rsprite is not on the Plugin Hub yet, so for now you install it by hand.
+
+### Get rsprite
+
+Either:
+
+- **Download a release.** Get `rsprite-0.1.0.zip` from the [latest release](https://github.com/sereselene/rsprite/releases) and unzip it into the folder your game client loads development plugins from.
+- **Or clone the repository**, then copy the `plugins/rsprite` folder into that same plugins folder. This gives you the latest code on `main` rather than a tested release.
+
+Either way, the `rsprite` folder should sit next to your own plugin's folder.
+
+### Use it in your plugin
+
+Add rsprite to the `requiredDependencies` in your plugin's `plugin.json`, using its folder name:
 
 ```json
 {
@@ -22,9 +35,11 @@ Add rsprite to the `requiredDependencies` in your plugin's `plugin.json`. While 
 }
 ```
 
-When rsprite is published on the Plugin Hub, replace `"rsprite"` with its Plugin Hub id.
+In the game's console, run `prf`, then `prl rsprite`, then load your own plugin.
 
-The client loads rsprite before your plugin and makes it available as the global `rsprite`. The global takes its name from the key, so keep the key as `rsprite`.
+The client loads rsprite before your plugin and makes it available as the global `rsprite`, so there is nothing to `require`. The global takes its name from the key, so keep the key as `rsprite`.
+
+When rsprite is published on the Plugin Hub, replace `"rsprite"` with its Plugin Hub id. From then on, players who install your plugin get rsprite automatically, and nobody needs to download it by hand.
 
 ## Quick example
 
@@ -133,7 +148,7 @@ If the function you pass to `BuildIndex` raises an error, rsprite prints one war
 
 ## The finder
 
-rsprite comes with a separate plugin, `rsprite-finder`, for finding sprites while you build. Players never need it, so install it in your own development setup rather than listing it as a dependency. It needs rsprite and PrettyUI enabled.
+rsprite comes with a separate plugin, `rsprite-finder`, for finding sprites while you build. Players never need it, so never list it as a dependency. To install it, unzip `rsprite-finder-0.1.0.zip` from the same release next to the `rsprite` folder, or copy `plugins/rsprite-finder` from a clone, then run `prl rsprite-finder` in the game's console. It needs rsprite and PrettyUI enabled.
 
 Open the Plugin Hub's Manage list, click the finder's settings cog, and press **OPEN FINDER**. The window has:
 
