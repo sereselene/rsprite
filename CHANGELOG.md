@@ -2,7 +2,7 @@
 
 Everything notable that changes in rsprite lands here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-13
 
 The first release, built against client `950-1`.
 
@@ -26,3 +26,5 @@ The first release, built against client `950-1`.
   - Favourites you can star, and a switch to show only those.
   - A preview background that cycles through dark, light and a checkerboard.
   - Your search, tag, page, selection, preview settings, favourites and options are remembered between sessions.
+
+[0.1.0]: https://github.com/sereselene/rsprite/releases/tag/v0.1.0
