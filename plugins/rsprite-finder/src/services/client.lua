@@ -19,6 +19,10 @@ function Client.Warn(key, message)
     print(PREFIX .. message)
 end
 
+function Client.Say(message)
+    print(PREFIX .. message)
+end
+
 function Client.Call(label, action, ...)
     local results = table.pack(pcall(action, ...))
     if not results[1] then

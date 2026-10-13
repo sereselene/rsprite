@@ -4,6 +4,7 @@ local SettingsView = {}
 
 SettingsView.MESSAGE = "Open the sprite finder to search every sprite in the game."
 SettingsView.BUTTON_LABEL = "OPEN FINDER"
+SettingsView.SHOW_HIDDEN_LABEL = "Show hidden sprites again"
 
 local currentView = nil
 
@@ -47,6 +48,11 @@ function SettingsView.Mount(component, handlers)
         currentView:AddFancyButton(SettingsView.BUTTON_LABEL, function()
             Client.Call("opening the finder", handlers.openFinder)
         end, { variant = "positive" })
+    end)
+    Client.Call("adding the show hidden sprites button", function()
+        currentView:AddFancyButton(SettingsView.SHOW_HIDDEN_LABEL, function()
+            Client.Call("showing hidden sprites again", handlers.showHiddenAgain)
+        end, { variant = "neutral" })
     end)
     Client.Call("adding the finder options", function()
         currentView:AddCheckboxButton(optionChoices(handlers.choices, handlers.options), {

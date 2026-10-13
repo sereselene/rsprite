@@ -12,7 +12,7 @@ local REAL_SPRITES = {
 }
 local FILLER_STEP = 250
 local HIGHEST_REAL_ID = 36636
-local WARNING_PREFIXES = { "rsprite: ", "rsprite-finder: " }
+local WARNING_PREFIXES = { "rsprite: ", "rsprite-finder: ", "rsprite-sprite-probe: " }
 local TEXT_WIDTH_PER_CHARACTER = 6
 
 local MUTABLE_SPRITE_PROPERTIES = {

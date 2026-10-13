@@ -215,4 +215,25 @@ check.Raises("an unknown option raises", function()
     rsprite.Find("attack", { colour = 1 })
 end, "rsprite.Find: unknown option colour", SOURCE)
 
+local unsafeSprites = ClientFakes.DefaultSprites()
+unsafeSprites[#unsafeSprites + 1] = { 1243, "FLOORSHADOWS" }
+local unsafeClient = ClientFakes.Install({ sprites = unsafeSprites })
+local unsafeRsprite = ClientFakes.LoadRsprite().Public
+local _, unsafeTotal = unsafeRsprite.Find("floorshadows")
+check.Equal("Find never lists a crashing sprite", unsafeTotal, 0)
+local everything = unsafeRsprite.Find("", { limit = 100000 })
+local listed = false
+for _, entry in ipairs(everything) do
+    if entry.id == 1243 or entry.name == "FLOORSHADOWS" then
+        listed = true
+    end
+end
+check.Equal("browsing never lists a crashing sprite", listed, false)
+check.Equal(
+    "browsing still lists the sprites after it",
+    everything[#everything].name,
+    "MAPFUNCTION_SEP_90"
+)
+check.Equal("leaving it out prints nothing", unsafeClient.WarningsMentioning("FLOORSHADOWS"), 0)
+
 check.Finish()

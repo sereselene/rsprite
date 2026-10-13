@@ -15,6 +15,7 @@ const LUA_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const RULE_MATCHERS = ["prefix", "contains", "suffix"];
 const RULE_KEYS = new Set([...RULE_MATCHERS, "tags"]);
 const CURATED_KEYS = new Set(["tags", "aliases", "width", "height"]);
+const UNSAFE_KEYS = new Set(["id", "name"]);
 
 class CatalogueError extends Error {}
 
@@ -54,6 +55,7 @@ const pathsFor = (root) => {
         build: join(catalogue, "build.json"),
         rules: join(catalogue, "tag-rules.json"),
         curated: join(catalogue, "curated.json"),
+        unsafe: join(catalogue, "unsafe.json"),
         diffs: join(catalogue, "diffs"),
         curation: join(root, "plugins", "rsprite", "src", "data", "curation.lua"),
     };
@@ -178,6 +180,48 @@ const validateCurated = (curated) => {
     return curated;
 };
 
+const validateUnsafe = (unsafe) => {
+    if (!Array.isArray(unsafe)) {
+        throw new CatalogueError("unsafe.json must be an array of { id, name } entries.");
+    }
+    const seenIds = new Set();
+    const seenNames = new Set();
+    unsafe.forEach((entry, index) => {
+        const where = `unsafe.json entry ${index + 1}`;
+        if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+            throw new CatalogueError(`${where} must be an object with an id and a name.`);
+        }
+        const unknown = Object.keys(entry).filter((key) => !UNSAFE_KEYS.has(key));
+        if (unknown.length > 0) {
+            throw new CatalogueError(`${where} has unknown keys: ${unknown.join(", ")}.`);
+        }
+        if (!Number.isInteger(entry.id) || entry.id < 0) {
+            throw new CatalogueError(`${where} needs an id that is a whole number 0 or above.`);
+        }
+        if (typeof entry.name !== "string" || !NAME_PATTERN.test(entry.name)) {
+            throw new CatalogueError(`${where} needs a sprite name made of A to Z, 0 to 9 and underscores.`);
+        }
+        if (seenIds.has(entry.id) || seenNames.has(entry.name)) {
+            throw new CatalogueError(`${where} repeats ${entry.id} ${entry.name}.`);
+        }
+        seenIds.add(entry.id);
+        seenNames.add(entry.name);
+    });
+    return unsafe;
+};
+
+const unsafeMismatches = (unsafe, entries) => {
+    const nameById = new Map(entries.map((entry) => [entry.id, entry.name]));
+    const idByName = new Map(entries.map((entry) => [entry.name, entry.id]));
+    return unsafe.flatMap((entry) => {
+        const nameNow = nameById.get(entry.id);
+        if (nameNow === entry.name) return [];
+        if (nameNow === undefined && !idByName.has(entry.name)) return [`${entry.id} ${entry.name} is not in the sprite list`];
+        if (nameNow === undefined) return [`${entry.name} is now id ${idByName.get(entry.name)}, not ${entry.id}`];
+        return [`id ${entry.id} is now ${nameNow}, not ${entry.name}`];
+    });
+};
+
 const ruleMatches = (rule, name) =>
     (rule.prefix === undefined || name.startsWith(rule.prefix)) &&
     (rule.contains === undefined || name.includes(rule.contains)) &&
@@ -239,7 +283,7 @@ const luaString = (text) => JSON.stringify(text);
 const luaKey = (name) => (LUA_IDENTIFIER.test(name) ? name : `[${luaString(name)}]`);
 const luaStrings = (items) => `{ ${items.map(luaString).join(", ")} }`;
 
-const curationSource = (rules, curated) => {
+const curationSource = (rules, curated, unsafe) => {
     const ruleLines = rules.map((rule) => {
         const fields = RULE_MATCHERS.filter((key) => rule[key] !== undefined).map((key) => `${key} = ${luaString(rule[key])}`);
         fields.push(`tags = ${luaStrings(rule.tags)}`);
@@ -254,7 +298,21 @@ const curationSource = (rules, curated) => {
             if (entry.height !== undefined) fields.push(`height = ${entry.height}`);
             return `        ${luaKey(name)} = { ${fields.join(", ")} },`;
         });
-    return ["return {", "    rules = {", ...ruleLines, "    },", "    curated = {", ...curatedLines, "    },", "}", ""].join("\n");
+    const unsafeLines = [...unsafe].sort((first, second) => first.id - second.id).map((entry) => `        [${entry.id}] = ${luaString(entry.name)},`);
+    return [
+        "return {",
+        "    rules = {",
+        ...ruleLines,
+        "    },",
+        "    curated = {",
+        ...curatedLines,
+        "    },",
+        "    unsafe = {",
+        ...unsafeLines,
+        "    },",
+        "}",
+        "",
+    ].join("\n");
 };
 
 const formatLua = (source, outputPath) => {
@@ -303,6 +361,7 @@ const generate = (options) => {
 
     const rules = validateRules(readJson(paths, paths.rules));
     const curated = validateCurated(readJson(paths, paths.curated));
+    const unsafe = existsSync(paths.unsafe) ? validateUnsafe(readJson(paths, paths.unsafe)) : [];
     const names = new Set(entries.map((entry) => entry.name));
 
     const orphans = Object.keys(curated).filter((name) => !names.has(name)).sort();
@@ -320,11 +379,19 @@ const generate = (options) => {
         );
     }
 
+    const mismatches = unsafeMismatches(unsafe, entries);
+    if (mismatches.length > 0) {
+        throw new CatalogueError(
+            `These unsafe.json entries no longer match the ${client} sprite list:\n${mismatches.map((problem) => `  ${problem}`).join("\n")}\n` +
+                "Check each sprite in the new build and fix its id and name in catalogue/unsafe.json.",
+        );
+    }
+
     const liveCurated = Object.fromEntries(Object.entries(curated).filter(([name]) => names.has(name)));
     const outputs = new Map([
         [paths.sprites, spritesText(entries)],
         [paths.build, buildText(client, entries)],
-        [paths.curation, formatLua(curationSource(rules, liveCurated), paths.curation)],
+        [paths.curation, formatLua(curationSource(rules, liveCurated, unsafe), paths.curation)],
     ]);
 
     if (options.check) {

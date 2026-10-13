@@ -67,4 +67,10 @@ check.Same(
 )
 check.Same("Attack has its plain alias", Curation.curated.SKILL_ATTACK.aliases, { "attack" })
 
+check.Equal(
+    "the generated module lists FLOORSHADOWS as crashing",
+    Curation.unsafe[1243],
+    "FLOORSHADOWS"
+)
+
 check.Finish()

@@ -73,4 +73,22 @@ check.Raises(
     SOURCE
 )
 
+local resolvedSource, resolvedPosition = rsprite.Resolve({ "FLOORSHADOWS", "SKILL_ATTACK" })
+check.Same(
+    "a crashing name is skipped in a chain",
+    { resolvedSource, resolvedPosition },
+    { 9318, 2 }
+)
+resolvedSource, resolvedPosition = rsprite.Resolve({ 1243, "SKILL_MAGIC" })
+check.Same(
+    "a crashing id is skipped in a chain",
+    { resolvedSource, resolvedPosition },
+    { 33454, 2 }
+)
+check.Equal(
+    "a chain of only a crashing sprite resolves to nothing",
+    rsprite.Resolve("FLOORSHADOWS"),
+    nil
+)
+
 check.Finish()

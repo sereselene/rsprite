@@ -32,6 +32,10 @@ files["plugins/rsprite-finder"] = {
 	globals = { "prettyui" },
 }
 
+files["scripts"] = {
+	read_globals = { "selftest" },
+}
+
 files["tests"] = {
 	globals = { "prettyui", "rsprite", "ui", "id", "Event", "Plugin", "PersistentDB", "config" },
 	read_globals = { "selftest" },

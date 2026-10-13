@@ -101,4 +101,39 @@ check.Equal("the id resolves once FromID stops raising", rsprite.Name(9329), "SK
 
 check.Equal("a whole float id is accepted", rsprite.Name(9329.0), "SKILL_HERBLORE")
 
+local lookupsBeforeUnsafe = client.lookups
+local fromIdBeforeUnsafe = client.fromIdCalls
+check.Equal("a sprite known to crash gives nil by name", rsprite.Get("FLOORSHADOWS"), nil)
+check.Equal("a sprite known to crash gives nil in lower case", rsprite.Get("floorshadows"), nil)
+check.Equal("a sprite known to crash gives nil by id", rsprite.Name(1243), nil)
+check.Equal("a sprite known to crash makes no name lookup", client.lookups, lookupsBeforeUnsafe)
+check.Equal("a sprite known to crash makes no id lookup", client.fromIdCalls, fromIdBeforeUnsafe)
+check.Equal(
+    "a sprite known to crash warns once",
+    client.WarningsMentioning(
+        "rsprite: FLOORSHADOWS is known to crash the client, so it is treated as missing"
+    ),
+    1
+)
+
+local aliasClient = ClientFakes.Install({ sprites = { { 1243, "FLOORSHADOWS_BY_ANOTHER_NAME" } } })
+local aliasRsprite = ClientFakes.LoadRsprite().Public
+check.Equal(
+    "a name that leads to a crashing id gives nil",
+    aliasRsprite.Get("FLOORSHADOWS_BY_ANOTHER_NAME"),
+    nil
+)
+check.Equal(
+    "a name that leads to a crashing id warns with the known name",
+    aliasClient.WarningsMentioning(
+        "rsprite: FLOORSHADOWS is known to crash the client, so it is treated as missing"
+    ),
+    1
+)
+check.Equal(
+    "a name that leads to a crashing id stays missing",
+    aliasRsprite.Get("FLOORSHADOWS_BY_ANOTHER_NAME"),
+    nil
+)
+
 check.Finish()

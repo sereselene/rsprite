@@ -8,6 +8,7 @@ FinderState.OPTIONS_CHANGED = "options"
 FinderState.PREVIEW_SIZES = { 16, 24, 32, 48, 64 }
 FinderState.DEFAULT_PREVIEW_SIZE = 48
 FinderState.PREVIEW_BACKGROUNDS = { "dark", "light", "checker" }
+FinderState.SAVED_VERSION = 2
 
 local COPY_FORMAT = 'rsprite.Get("%s")'
 local DRAW_FORMAT = 'rsprite.Draw(parent, "%s", { size = %d })'
@@ -46,7 +47,7 @@ function FinderState.New(saved)
         page = 1,
         previewSize = FinderState.DEFAULT_PREVIEW_SIZE,
         previewBackground = FinderState.PREVIEW_BACKGROUNDS[1],
-        selectedName = nonEmptyString(source.selectedName),
+        selectedName = nil,
         selectedTile = nil,
         selectedEntry = nil,
         variant = 1,
@@ -55,8 +56,13 @@ function FinderState.New(saved)
         tiles = {},
         total = 0,
     }
-    if type(source.page) == "number" and source.page >= 1 then
+    local savedByThisVersion = type(source.version) == "number"
+        and source.version >= FinderState.SAVED_VERSION
+    if savedByThisVersion and type(source.page) == "number" and source.page >= 1 then
         state.page = math.floor(source.page)
+    end
+    if savedByThisVersion then
+        state.selectedName = nonEmptyString(source.selectedName)
     end
     if isPreviewSize(source.previewSize) then
         state.previewSize = source.previewSize
@@ -69,6 +75,7 @@ end
 
 function FinderState.Snapshot(state)
     return {
+        version = FinderState.SAVED_VERSION,
         query = state.query,
         tag = state.tag or "",
         page = state.page,
@@ -90,9 +97,15 @@ function FinderState.Invalidate(state)
     state.results = nil
 end
 
-local function forgetSearch(state)
+function FinderState.ForgetSearch(state)
     state.entries = nil
     state.results = nil
+end
+
+function FinderState.StartOver(state)
+    state.page = 1
+    FinderState.Select(state, nil)
+    FinderState.ForgetSearch(state)
 end
 
 function FinderState.SetQuery(state, query)
@@ -101,7 +114,7 @@ function FinderState.SetQuery(state, query)
     end
     state.query = query
     state.page = 1
-    forgetSearch(state)
+    FinderState.ForgetSearch(state)
     return true
 end
 
@@ -112,7 +125,7 @@ function FinderState.SetTag(state, tag)
     end
     state.tag = normalisedTag
     state.page = 1
-    forgetSearch(state)
+    FinderState.ForgetSearch(state)
     return true
 end
 

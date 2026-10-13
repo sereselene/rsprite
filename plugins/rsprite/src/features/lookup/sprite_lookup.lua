@@ -1,4 +1,5 @@
 local Client = require("src/services/client")
+local UnsafeSprites = require("src/features/lookup/unsafe_sprites")
 local Warnings = require("src/services/warnings")
 local WholeNumber = require("src/utils/whole_number")
 
@@ -20,6 +21,9 @@ function SpriteLookup.Get(name)
         return nil
     end
     local key = string.upper(name)
+    if UnsafeSprites.IsUnsafeName(key) then
+        return UnsafeSprites.Reject(key)
+    end
     local cached = idByName[key]
     if cached ~= nil then
         return cached or nil
@@ -33,6 +37,10 @@ function SpriteLookup.Get(name)
         return nil
     end
     local spriteId = WholeNumber.From(value)
+    if spriteId ~= nil and UnsafeSprites.IsUnsafeId(spriteId) then
+        idByName[key] = MISSING
+        return UnsafeSprites.Reject(UnsafeSprites.NameOfId(spriteId))
+    end
     if spriteId == nil then
         Warnings.Once("get " .. key, "there is no sprite called " .. key)
     end
@@ -50,6 +58,9 @@ function SpriteLookup.Name(spriteId)
     local wholeId = WholeNumber.From(spriteId)
     if wholeId == nil then
         return nil
+    end
+    if UnsafeSprites.IsUnsafeId(wholeId) then
+        return UnsafeSprites.Reject(UnsafeSprites.NameOfId(wholeId))
     end
     local cached = nameById[wholeId]
     if cached ~= nil then

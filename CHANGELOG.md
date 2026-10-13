@@ -2,6 +2,18 @@
 
 Everything notable that changes in rsprite lands here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - Unreleased
+
+### Added
+
+- A list of sprites known to crash the game client. rsprite treats them as missing everywhere: `rsprite.Get` and `rsprite.Name` give `nil`, `rsprite.Draw`, `rsprite.SetSource` and `rsprite.Resolve` skip them, and `rsprite.Find` never lists them.
+- A crash guard in the finder. If the game closes while the finder is drawing, those sprites are hidden the next time you open it, and **Show hidden sprites again** on the finder's cog brings them back.
+
+### Fixed
+
+- The finder no longer crashes the game client on FLOORSHADOWS.
+- A finder that was stuck after a crash starts on page 1 again.
+
 ## [0.1.1] - 2026-10-13
 
 ### Changed

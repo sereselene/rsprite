@@ -8,6 +8,7 @@ const INSTALLS = [
     { source: join(repositoryRoot, "plugins", "rsprite"), name: "rsprite" },
     { source: join(repositoryRoot, "plugins", "rsprite-finder"), name: "rsprite-finder" },
     { source: join(repositoryRoot, "examples", "basic"), name: "rsprite-example" },
+    { source: join(repositoryRoot, "examples", "sprite-probe"), name: "rsprite-sprite-probe" },
 ];
 
 const stop = (message) => {
@@ -62,4 +63,4 @@ for (const install of INSTALLS) {
     cpSync(install.source, destination, { recursive: true });
     console.log(`dev-install: copied ${install.name} to ${destination}`);
 }
-console.log("dev-install: done. In game run prf, then prl rsprite, prl rsprite-finder and prl rsprite-example.");
+console.log("dev-install: done. In game run prf, then prl rsprite, prl rsprite-finder, prl rsprite-example and prl rsprite-sprite-probe.");

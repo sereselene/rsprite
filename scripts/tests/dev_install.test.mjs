@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const installer = join(repositoryRoot, "scripts", "dev-install.mjs");
-const INSTALLED_FOLDERS = ["rsprite", "rsprite-example", "rsprite-finder"];
+const INSTALLED_FOLDERS = ["rsprite", "rsprite-example", "rsprite-finder", "rsprite-sprite-probe"];
 
 const workspaces = [];
 
