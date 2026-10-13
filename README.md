@@ -228,9 +228,9 @@ To make a change:
 1. Edit either file.
 2. Run `npm run catalogue`. It rebuilds the generated module and checks that every curated name exists and every rule matches at least one sprite.
 3. Run `npm test`.
-4. Open a pull request.
+4. Open a pull request and fill in its template.
 
-You can also suggest tags, aliases or anything else on [the issue tracker](https://github.com/sereselene/rsprite/issues).
+You can also suggest tags or aliases with the suggestion form on [the issue tracker](https://github.com/sereselene/rsprite/issues), or report a problem with the bug report form.
 
 </details>
 

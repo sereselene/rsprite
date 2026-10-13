@@ -1,4 +1,4 @@
-name: PR title check
+name: Pull request checks
 
 on:
   pull_request:
@@ -6,6 +6,7 @@ on:
       - opened
       - edited
       - synchronize
+      - reopened
     branches:
       - main
       - release/**
@@ -115,3 +116,84 @@ jobs:
                 "Create this label in the repository first if it does not exist yet."
               );
             }
+
+  pull-request-details:
+    name: Pull request details
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check the description against the template
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = (context.payload.pull_request.body || "").replace(/\r\n/g, "\n");
+            const sectionNames = ["What this changes", "Why", "How it was tested", "Checklist"];
+            const writtenSections = ["What this changes", "Why", "How it was tested"];
+            const checklistItems = [
+              { key: "npm test", label: "npm test passes" },
+              { key: "npm run catalogue", label: "npm run catalogue was run if the catalogue changed" },
+              { key: "generated file", label: "no generated file was edited by hand" },
+              { key: "CHANGELOG.md", label: "README and CHANGELOG are updated if behaviour changed" },
+              { key: "type(scope)", label: "the title follows the required format" },
+            ];
+            const templatePath = ".github/pull_request_template.md";
+
+            const linesBySection = new Map();
+            let currentSection = null;
+            for (const line of body.split("\n")) {
+              const heading = /^##\s+(.+?)\s*$/.exec(line);
+              if (heading !== null) {
+                currentSection = heading[1];
+                linesBySection.set(currentSection, []);
+              } else if (currentSection !== null) {
+                linesBySection.get(currentSection).push(line);
+              }
+            }
+
+            if (!sectionNames.some((name) => linesBySection.has(name))) {
+              core.setFailed(`The description is missing the pull request template. Copy it from ${templatePath} and fill it in.`);
+              return;
+            }
+
+            const withoutHints = (lines) => lines.join("\n").replace(/<!--[\s\S]*?-->/g, "").trim();
+            const problems = [];
+
+            const missingSections = sectionNames.filter((name) => !linesBySection.has(name));
+            if (missingSections.length > 0) {
+              problems.push(`Add these sections back from ${templatePath}: ${missingSections.join(", ")}.`);
+            }
+
+            const emptySections = writtenSections.filter((name) => linesBySection.has(name) && withoutHints(linesBySection.get(name)) === "");
+            if (emptySections.length > 0) {
+              problems.push(`Fill in these sections: ${emptySections.join(", ")}.`);
+            }
+
+            if (linesBySection.has("Checklist")) {
+              const checklistLines = linesBySection.get("Checklist");
+              const untickedItems = [];
+              const missingItems = [];
+              for (const item of checklistItems) {
+                const line = checklistLines.find((candidate) => /^\s*[-*]\s+\[[ xX]\]/.test(candidate) && candidate.includes(item.key));
+                if (line === undefined) {
+                  missingItems.push(item.label);
+                } else if (!/^\s*[-*]\s+\[[xX]\]/.test(line)) {
+                  untickedItems.push(item.label);
+                }
+              }
+              if (untickedItems.length > 0) {
+                problems.push(`Tick these checklist items: ${untickedItems.join("; ")}.`);
+              }
+              if (missingItems.length > 0) {
+                problems.push(`Put these checklist items back from ${templatePath}: ${missingItems.join("; ")}.`);
+              }
+            }
+
+            if (problems.length > 0) {
+              core.setFailed(problems.join("\n"));
+              return;
+            }
+            core.info("Every section is filled in and every checklist item is ticked.");

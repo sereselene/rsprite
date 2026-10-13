@@ -1,0 +1,26 @@
+name: Tag or alias suggestion
+description: Suggest tags or aliases to make a sprite easier to find.
+labels:
+  - catalogue
+body:
+  - type: input
+    id: sprite-name
+    attributes:
+      label: Sprite name
+      placeholder: SKILL_ATTACK
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-tags-or-aliases
+    attributes:
+      label: Suggested tags or aliases
+      description: One per line, in lower case words, such as attack or combat.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What you searched for, or where the sprite is used in game.
+    validations:
+      required: false
