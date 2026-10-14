@@ -31,13 +31,13 @@ jobs:
 
     steps:
       - name: Check out the gitlint rules from the base branch
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
 
@@ -98,7 +98,7 @@ jobs:
 
     steps:
       - name: Apply the matching type label to the pull request
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
           COMMIT_TYPE: ${{ needs.validate.outputs.type }}
         with:
@@ -130,7 +130,7 @@ jobs:
 
     steps:
       - name: Check the description against the template
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
             const body = (context.payload.pull_request.body || "").replace(/\r\n/g, "\n");
