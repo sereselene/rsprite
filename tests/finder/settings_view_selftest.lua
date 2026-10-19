@@ -34,6 +34,11 @@ check.Equal(
     prettyuiFake.Logged("FancyButton.new OPEN FINDER positive"),
     1
 )
+check.Equal(
+    "the cog offers to show hidden sprites again",
+    prettyuiFake.Logged("FancyButton.new " .. SettingsView.SHOW_HIDDEN_LABEL .. " neutral"),
+    1
+)
 
 prettyuiFake.log = {}
 client.FireEvent("SettingsLayerReady", { component = FinderFakes.SettingsDialog(client) })

@@ -219,3 +219,65 @@ describe("generate-catalogue", () => {
         }
     });
 });
+
+const writeUnsafe = (root, entries) => writeFileSync(join(root, "catalogue", "unsafe.json"), `${JSON.stringify(entries, null, 2)}\n`);
+
+describe("generate-catalogue and unsafe.json", () => {
+    test("emits the crashing sprites into the curation module", () => {
+        const root = newWorkspace();
+        writeUnsafe(root, [{ id: 6, name: "ZETA_BUTTON" }]);
+        const run = runGenerator(root, "--dump", dumpA, "--client", "100-1");
+        assert.equal(run.status, 0, run.stderr);
+        assert.match(generatedFiles(root).curation, /unsafe = \{\s+\[6\] = "ZETA_BUTTON",\s+\}/);
+    });
+
+    test("writes an empty list when there is no unsafe.json", () => {
+        const root = newWorkspace();
+        assert.equal(runGenerator(root, "--dump", dumpA, "--client", "100-1").status, 0);
+        assert.match(generatedFiles(root).curation, /unsafe = \{\}/);
+    });
+
+    test("fails when an id is not in the sprite list", () => {
+        const root = newWorkspace();
+        writeUnsafe(root, [{ id: 4, name: "MISSING_SPRITE" }]);
+        const run = runGenerator(root, "--dump", dumpA, "--client", "100-1");
+        assert.equal(run.status, 1);
+        assert.match(run.stderr, /These unsafe\.json entries no longer match the 100-1 sprite list:\n  4 MISSING_SPRITE is not in the sprite list/);
+    });
+
+    test("fails when the id now has another name", () => {
+        const root = newWorkspace();
+        writeUnsafe(root, [{ id: 6, name: "ALPHA_ICON" }]);
+        const run = runGenerator(root, "--dump", dumpA, "--client", "100-1");
+        assert.equal(run.status, 1);
+        assert.match(run.stderr, /id 6 is now ZETA_BUTTON, not ALPHA_ICON/);
+    });
+
+    test("fails when the name has moved to another id", () => {
+        const root = newWorkspace();
+        writeUnsafe(root, [{ id: 4, name: "ZETA_BUTTON" }]);
+        const run = runGenerator(root, "--dump", dumpA, "--client", "100-1");
+        assert.equal(run.status, 1);
+        assert.match(run.stderr, /ZETA_BUTTON is now id 6, not 4/);
+    });
+
+    test("refuses malformed and repeated entries", () => {
+        const root = newWorkspace();
+        writeUnsafe(root, [{ id: "6", name: "ZETA_BUTTON" }]);
+        assert.match(runGenerator(root, "--dump", dumpA, "--client", "100-1").stderr, /unsafe\.json entry 1 needs an id that is a whole number 0 or above/);
+        writeUnsafe(root, [{ id: 6, name: "ZETA_BUTTON" }, { id: 6, name: "ZETA_BUTTON" }]);
+        assert.match(runGenerator(root, "--dump", dumpA, "--client", "100-1").stderr, /unsafe\.json entry 2 repeats 6 ZETA_BUTTON/);
+        writeUnsafe(root, [{ id: 6, name: "ZETA_BUTTON", reason: "crash" }]);
+        assert.match(runGenerator(root, "--dump", dumpA, "--client", "100-1").stderr, /unsafe\.json entry 1 has unknown keys: reason/);
+    });
+
+    test("check notices a changed list", () => {
+        const root = newWorkspace();
+        assert.equal(runGenerator(root, "--dump", dumpA, "--client", "100-1").status, 0);
+        assert.equal(runGenerator(root, "--check").status, 0);
+        writeUnsafe(root, [{ id: 6, name: "ZETA_BUTTON" }]);
+        const run = runGenerator(root, "--check");
+        assert.equal(run.status, 1);
+        assert.match(run.stderr, /These generated files are out of date:\n  plugins\/rsprite\/src\/data\/curation\.lua/);
+    });
+});

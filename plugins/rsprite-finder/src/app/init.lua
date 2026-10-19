@@ -16,9 +16,11 @@ local function onOptionChanged(optionName, selected)
 end
 
 local function onSettingsLayerReady(event)
+    Client.Call("checking how the last session closed", FinderWindow.RecoverFromCrash)
     Client.Call("opening the settings dialog", function()
         SettingsView.Mount(event.component, {
             openFinder = FinderWindow.Open,
+            showHiddenAgain = FinderWindow.ShowHiddenAgain,
             choices = FinderOptions.CHOICES,
             options = FinderOptions.Current(),
             onOptionChanged = onOptionChanged,

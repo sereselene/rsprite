@@ -13,6 +13,7 @@
     "catalogue": "node scripts/generate-catalogue.mjs",
     "placeholder": "node scripts/generate-placeholder.mjs",
     "finder-images": "node scripts/generate-finder-images.mjs",
+    "probe-pages": "node scripts/generate-probe-pages.mjs",
     "dev-install": "node scripts/dev-install.mjs",
     "package": "node scripts/package.mjs",
     "check-platform": "node scripts/check-platform.mjs",

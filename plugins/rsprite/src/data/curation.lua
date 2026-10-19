@@ -111,4 +111,7 @@ return {
         SKILL_WOODCUTTING = { tags = {}, aliases = { "woodcutting" } },
         WORLD_SELECT_REFRESH_ARROW = { tags = {}, aliases = { "refresh" } },
     },
+    unsafe = {
+        [1243] = "FLOORSHADOWS",
+    },
 }

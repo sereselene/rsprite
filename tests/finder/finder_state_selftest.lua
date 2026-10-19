@@ -64,12 +64,12 @@ check.Equal("paging before the start clamps to the first page", state.page, 1)
 state = FinderState.New()
 check.Equal("no results still count as one page", FinderState.PageCount(state), 1)
 
-local shrinking = FinderState.New({ page = 9 })
+local shrinking = FinderState.New({ version = FinderState.SAVED_VERSION, page = 9 })
 FinderState.Refresh(shrinking, fakeSearch(namesFrom(70)), NO_OPTIONS)
 check.Equal("a saved page beyond the results clamps to the last page", shrinking.page, 3)
 check.Equal("the clamped page shows the last results", shrinking.tiles[1].name, "NAME_61")
 
-local oldSave = FinderState.New({ page = 5 })
+local oldSave = FinderState.New({ version = FinderState.SAVED_VERSION, page = 5 })
 FinderState.Refresh(oldSave, fakeSearch(namesFrom(100)), NO_OPTIONS)
 check.Equal("a page saved under the old 18 per page clamps to the new last page", oldSave.page, 4)
 check.Equal("the clamped old page shows the last partial page", #oldSave.tiles, 10)
@@ -123,14 +123,15 @@ FinderState.SetQuery(state, "nothing at all")
 FinderState.Refresh(state, search, NO_OPTIONS, SEARCH_CHANGED)
 check.Equal("no results clear the selection", state.selectedEntry, nil)
 
-local restored = FinderState.New({ selectedName = "NAME_30", page = 1 })
+local restored =
+    FinderState.New({ version = FinderState.SAVED_VERSION, selectedName = "NAME_30", page = 1 })
 FinderState.Refresh(restored, search, NO_OPTIONS)
 check.Equal(
     "a saved selection is looked up again",
     restored.selectedEntry and restored.selectedEntry.name,
     "NAME_30"
 )
-local vanished = FinderState.New({ selectedName = "NAME_99" })
+local vanished = FinderState.New({ version = FinderState.SAVED_VERSION, selectedName = "NAME_99" })
 FinderState.Refresh(vanished, search, NO_OPTIONS)
 check.Equal(
     "a saved selection that no longer exists falls back to the first result",
@@ -384,7 +385,8 @@ check.Equal("turning the options off shows every sprite", grouped.total, 47)
 check.Equal("turning grouping off keeps the variant selected", grouped.selectedName, "EMOTES_10")
 check.Equal("a variant on its own has no stepper", FinderState.VariantStep(grouped), nil)
 
-local paged = FinderState.New({ selectedName = "SINGLE_40_SPRITE" })
+local paged =
+    FinderState.New({ version = FinderState.SAVED_VERSION, selectedName = "SINGLE_40_SPRITE" })
 FinderState.Refresh(paged, familySearch, NO_OPTIONS)
 check.Equal("a restored selection keeps the saved page", paged.page, 1)
 FinderState.Invalidate(paged)
@@ -396,12 +398,60 @@ check.Equal(
     "SINGLE_40_SPRITE"
 )
 
-local lost = FinderState.New({ selectedName = "BANNER_FR" })
+local lost = FinderState.New({ version = FinderState.SAVED_VERSION, selectedName = "BANNER_FR" })
 FinderState.Refresh(lost, familySearch, NO_OPTIONS)
 lost.page = 2
 FinderState.Invalidate(lost)
 FinderState.Refresh(lost, familySearch, GROUPED, FinderState.OPTIONS_CHANGED)
 check.Equal("a hidden selection falls back to the first result", lost.selectedName, "SKILL_ATTACK")
 check.Equal("the fallback goes back to the first page", lost.page, 1)
+
+local stuckBefore = {
+    query = "lantern",
+    tag = "icon",
+    page = 19,
+    previewSize = 64,
+    previewBackground = "checker",
+    selectedName = "FLOORSHADOWS",
+}
+local recovered = FinderState.New(stuckBefore)
+check.Equal("a state saved before versions starts on page 1", recovered.page, 1)
+check.Equal("a state saved before versions restores no selection", recovered.selectedName, nil)
+check.Same(
+    "a state saved before versions keeps its search, tag and preview settings",
+    { recovered.query, recovered.tag, recovered.previewSize, recovered.previewBackground },
+    { "lantern", "icon", 64, "checker" }
+)
+local older =
+    FinderState.New({ version = FinderState.SAVED_VERSION - 1, page = 19, selectedName = "NAME_1" })
+check.Same(
+    "an older version starts on page 1 with no selection",
+    { older.page, older.selectedName },
+    { 1, nil }
+)
+local current =
+    FinderState.New({ version = FinderState.SAVED_VERSION, page = 19, selectedName = "NAME_1" })
+check.Same(
+    "the current version keeps its page and selection",
+    { current.page, current.selectedName },
+    { 19, "NAME_1" }
+)
+check.Equal(
+    "a snapshot carries the version",
+    FinderState.Snapshot(current).version,
+    FinderState.SAVED_VERSION
+)
+local startingOver = FinderState.New({
+    version = FinderState.SAVED_VERSION,
+    query = "name",
+    page = 3,
+    selectedName = "NAME_1",
+})
+FinderState.StartOver(startingOver)
+check.Same(
+    "starting over goes to page 1 with no selection and keeps the search",
+    { startingOver.page, startingOver.selectedName, startingOver.query },
+    { 1, nil, "name" }
+)
 
 check.Finish()

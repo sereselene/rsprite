@@ -1,4 +1,5 @@
 local Client = require("src/services/client")
+local CrashGuard = require("src/features/finder/crash_guard")
 local DropDown = require("src/components/drop_down")
 local DetailPanel = require("src/features/finder/detail_panel")
 local Favourites = require("src/features/finder/favourites")
@@ -97,7 +98,9 @@ local function search(query, tag)
     if tag ~= nil then
         options.tags = { tag }
     end
-    return Client.Call("searching sprites", rsprite.Find, query, options) or {}
+    return CrashGuard.FilterEntries(
+        Client.Call("searching sprites", rsprite.Find, query, options) or {}
+    )
 end
 
 local function save()
@@ -158,13 +161,40 @@ local function showEmpty(visible)
     end
 end
 
-local function showDetail()
+local function guardDraw(names)
+    if finder == nil or not finder.visible or #names == 0 then
+        return
+    end
+    local options = FinderOptions.Current()
+    CrashGuard.BeforeDraw({
+        page = state.page,
+        query = state.query,
+        tag = state.tag,
+        groupVariants = options.groupVariants,
+        hideClutter = options.hideClutter,
+        favouritesOnly = favourites.only,
+    }, names)
+end
+
+local function previewNames()
+    if state.selectedEntry == nil then
+        return {}
+    end
+    return { state.selectedEntry.name }
+end
+
+local function drawDetail()
     finder.detail.Show(state.selectedEntry, {
         previewSize = state.previewSize,
         variantStep = FinderState.VariantStep(state),
         starred = Favourites.Contains(favourites, state.selectedName),
         background = state.previewBackground,
     })
+end
+
+local function showDetail()
+    guardDraw(previewNames())
+    drawDetail()
 end
 
 local function render()
@@ -174,9 +204,17 @@ local function render()
         finder.previousButton:SetDisabled(state.page <= 1)
         finder.nextButton:SetDisabled(state.page >= FinderState.PageCount(state))
     end)
+    local names = {}
+    for _, tile in ipairs(state.tiles) do
+        names[#names + 1] = tile.name
+    end
+    for _, name in ipairs(previewNames()) do
+        names[#names + 1] = name
+    end
+    guardDraw(names)
     finder.grid.Show(state.tiles, FinderState.SelectedPosition(state))
     showEmpty(state.total == 0)
-    showDetail()
+    drawDetail()
 end
 
 local function refresh(change)
@@ -203,6 +241,7 @@ local function flushPendingQuery()
 end
 
 local function onLogic()
+    CrashGuard.Tick()
     if pendingQuery == nil then
         return
     end
@@ -336,6 +375,7 @@ end
 local function onClosed()
     flushPendingQuery()
     stopTicking()
+    CrashGuard.Clear()
     if finder ~= nil then
         finder.visible = false
     end
@@ -499,11 +539,41 @@ local function restoreFields()
     finder.detail.WriteCopyFields()
 end
 
+function FinderWindow.RecoverFromCrash()
+    if CrashGuard.Recover() == nil then
+        return false
+    end
+    if state == nil then
+        state = FinderState.New(Preferences.Load(FinderWindow.PREFERENCES_NAME))
+    end
+    FinderState.StartOver(state)
+    save()
+    if finder ~= nil and finder.visible then
+        refresh(FinderState.SEARCH_CHANGED)
+    end
+    return true
+end
+
+function FinderWindow.ShowHiddenAgain()
+    local count = CrashGuard.ShowHiddenAgain()
+    if count == 1 then
+        Client.Say("1 hidden sprite is shown again")
+    else
+        Client.Say(count .. " hidden sprites are shown again")
+    end
+    if state ~= nil then
+        FinderState.ForgetSearch(state)
+        refresh()
+    end
+    return count
+end
+
 function FinderWindow.Open()
     if rsprite == nil or prettyui == nil then
         Client.Warn("dependencies", "the finder needs both rsprite and PrettyUI enabled")
         return false
     end
+    FinderWindow.RecoverFromCrash()
     if state == nil then
         state = FinderState.New(Preferences.Load(FinderWindow.PREFERENCES_NAME))
     end
@@ -558,6 +628,7 @@ end
 
 function FinderWindow.Destroy()
     stopTicking()
+    CrashGuard.Clear()
     save()
     if finder ~= nil then
         local window = finder.window

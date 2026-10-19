@@ -248,4 +248,24 @@ check.Check("a failed create gives nil", sprite == nil and index == nil, tostrin
 check.Equal("a failed create warns once", #client.warnings - warningsBefore, 1)
 client.raiseOnCreate = false
 
+client.ClearLog()
+local crashing = rsprite.Draw(parent, "FLOORSHADOWS")
+check.Check("Draw of a crashing sprite still returns a sprite", crashing ~= nil, tostring(crashing))
+check.Equal(
+    "Draw of a crashing sprite shows the placeholder",
+    client.log[#client.log - 1],
+    "sprite handle:placeholder"
+)
+check.Equal("Draw of a crashing sprite never sets its id", client.Logged("sprite 1243"), 0)
+check.Equal(
+    "Draw of a crashing sprite warns",
+    client.WarningsMentioning(
+        "rsprite: FLOORSHADOWS is known to crash the client, so it is treated as missing"
+    ),
+    1
+)
+client.ClearLog()
+rsprite.SetSource(crashing, { "FLOORSHADOWS", "SKILL_HERBLORE" })
+check.Equal("SetSource moves past a crashing sprite", client.log[1], "sprite 9329")
+
 check.Finish()

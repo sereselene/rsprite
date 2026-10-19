@@ -1,0 +1,10 @@
+{
+  "name": "rsprite-sprite-probe",
+  "version": "0.0.1",
+  "hasSettingsIcon": true,
+  "hasRibbonIcon": false,
+  "requiredDependencies": {
+    "rsprite": "rsprite"
+  },
+  "optionalDependencies": {}
+}

@@ -1,4 +1,5 @@
 local Client = require("src/services/client")
+local UnsafeSprites = require("src/features/lookup/unsafe_sprites")
 local Warnings = require("src/services/warnings")
 
 local NameIndex = {}
@@ -31,8 +32,10 @@ local function advance(state, limit)
         local spriteId = state.nextId
         local found, name = Client.SpriteNameById(spriteId)
         if found and type(name) == "string" and name ~= "" then
-            state.names[#state.names + 1] = name
-            state.ids[#state.ids + 1] = spriteId
+            if not UnsafeSprites.IsUnsafeId(spriteId) and not UnsafeSprites.IsUnsafeName(name) then
+                state.names[#state.names + 1] = name
+                state.ids[#state.ids + 1] = spriteId
+            end
             state.nilsSinceHit = 0
         else
             state.nilsSinceHit = state.nilsSinceHit + 1

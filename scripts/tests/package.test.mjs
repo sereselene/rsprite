@@ -124,3 +124,35 @@ describe("package", () => {
         expectRefusal(root, /^package: plugins\/rsprite\/plugin\.json needs a version such as "0\.1\.0"/);
     });
 });
+
+describe("package and the sprite probe", () => {
+    test("never zips the sprite probe from the real repository", () => {
+        assert.ok(existsSync(join(repositoryRoot, "examples", "sprite-probe", "plugin.json")), "the probe exists to be left out");
+        const output = mkdtempSync(join(tmpdir(), "rsprite-package-real-"));
+        workspaces.push(output);
+        const run = spawnSync(process.execPath, [packager, "--output", output], { encoding: "utf8" });
+        assert.equal(run.status, 0, run.stderr);
+        const archives = readdirSync(output).sort();
+        assert.equal(archives.length, 2, archives.join(", "));
+        assert.ok(archives.every((name) => /^rsprite(-finder)?-\d+\.\d+\.\d+\.zip$/.test(name)), archives.join(", "));
+        for (const archive of archives) {
+            const paths = Object.keys(unzipSync(readFileSync(join(output, archive))));
+            const folder = archive.startsWith("rsprite-finder-") ? "rsprite-finder/" : "rsprite/";
+            assert.ok(paths.length > 0, archive);
+            assert.deepEqual(paths.filter((path) => !path.startsWith(folder)), [], archive);
+            assert.deepEqual(paths.filter((path) => /probe|examples/i.test(path)), [], archive);
+        }
+    });
+
+    test("leaves out a sprite probe folder in any checkout", () => {
+        const root = newWorkspace();
+        writeFile(root, "examples/sprite-probe/plugin.json", JSON.stringify({ name: "rsprite-sprite-probe", version: "0.0.1" }));
+        writeFile(root, "examples/sprite-probe/main.lua", "return {}\n");
+        assert.equal(runPackager(root).status, 0);
+        assert.deepEqual(releaseFiles(root), ["rsprite-0.2.0.zip", "rsprite-finder-0.2.0.zip"]);
+        for (const archive of releaseFiles(root)) {
+            const paths = Object.keys(unzipSync(readFileSync(join(root, "release", archive))));
+            assert.deepEqual(paths.filter((path) => path.includes("sprite-probe")), [], archive);
+        }
+    });
+});

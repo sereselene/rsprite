@@ -145,6 +145,7 @@ If the function you pass to `BuildIndex` raises an error, rsprite prints one war
 - rsprite always draws at a set size, 24 by 24 unless you choose another. `Find` reports a sprite's real size when it's known, either from its name (`_32PX` means 32 by 32) or from the curated list.
 - Sprite names come from the game you're running, so they always match the current game build.
 - If you inspect a sprite drawn by `Draw` or `SetSource`, the source it used is held in its `sprite` property.
+- A small number of sprites are known to crash the game client when drawn. rsprite treats them as missing, so `rsprite.Get` gives `nil` and `rsprite.Draw` shows the placeholder.
 
 ## The finder
 
@@ -182,6 +183,8 @@ Favourites always show exactly what you starred, whatever the options are set to
 
 The finder remembers your search, tag, page, selection, preview size, preview background, favourites and options between sessions. The first time you open it, it takes a moment to read the sprite names before the grid fills in.
 
+If the game closes while the finder is drawing, it hides the sprites it was drawing and starts on page 1 the next time you open it. **Show hidden sprites again** on the finder's cog brings them back.
+
 The finder prints its own warnings with the `rsprite-finder:` prefix.
 
 ## Using rsprite with PrettyUI
@@ -208,11 +211,12 @@ You need Node 22.12 or later. StyLua and lefthook install platform specific bina
 | `npm run catalogue -- --check` | Fails if the generated catalogue files are out of date. |
 | `npm run placeholder` | Regenerates the placeholder image. |
 | `npm run finder-images` | Regenerates the finder's images: the text box background and the preview checkerboard. |
-| `npm run dev-install -- --target <folder>` | Copies rsprite, the finder and the example plugin into the game's dev plugin folder. |
+| `npm run probe-pages` | Regenerates the sprite probe's page lists from the committed sprite list, in the finder's own order. |
+| `npm run dev-install -- --target <folder>` | Copies rsprite, the finder, the example plugin and the sprite probe into the game's dev plugin folder. |
 | `npm run package` | Builds `rsprite-X.Y.Z.zip` and `rsprite-finder-X.Y.Z.zip` in `release`, using each `plugin.json` version. |
 | `npm run validate-tag -- vX.Y.Z` | Checks a release tag against each `plugin.json`, `rsprite.version` and the changelog. |
 
-`dev-install` can also read the target folder from the `RSPRITE_DEV_PLUGIN_FOLDER` environment variable. It only replaces its own `rsprite`, `rsprite-finder` and `rsprite-example` folders and won't touch anything else. After installing, run `prf` in the game's console, then `prl rsprite`, `prl rsprite-finder` and `prl rsprite-example`. Open the example's settings cog to see each feature drawn, or the finder's cog to start searching.
+`dev-install` can also read the target folder from the `RSPRITE_DEV_PLUGIN_FOLDER` environment variable. It only replaces its own `rsprite`, `rsprite-finder`, `rsprite-example` and `rsprite-sprite-probe` folders and won't touch anything else. After installing, run `prf` in the game's console, then `prl rsprite`, `prl rsprite-finder`, `prl rsprite-example` and `prl rsprite-sprite-probe`. Open the example's settings cog to see each feature drawn, or the finder's cog to start searching. The sprite probe is a development tool for tracking down sprites that crash the game client. Its sweep draws every sprite a page at a time, names any sprite that crashes the client, and lists them ready to add to `catalogue/unsafe.json`. It is never part of a release.
 
 Raw sprite name lists are never stored in this repository. Keep them alongside it, for example in `../sprite-dumps/950-1.txt`, and pass one to `--dump` when a new game build comes out.
 
@@ -255,7 +259,7 @@ To make a change:
 3. Run `npm test`.
 4. Open a pull request and fill in its template.
 
-You can also suggest tags or aliases with the suggestion form on [the issue tracker](https://github.com/sereselene/rsprite/issues), or report a problem with the bug report form.
+You can also suggest tags or aliases with the suggestion form on [the issue tracker](https://github.com/sereselene/rsprite/issues), or report a problem with the bug report form. If you find a sprite that crashes the game client, report it on [the issue tracker](https://github.com/sereselene/rsprite/issues) with its name and id.
 
 </details>
 
