@@ -8,7 +8,7 @@ local SpriteSearch = require("src/features/search/sprite_search")
 local App = {}
 
 App.Public = {
-    version = "0.1.1",
+    version = "0.1.2",
     Get = SpriteLookup.Get,
     Name = SpriteLookup.Name,
     Resolve = SourceChain.Resolve,

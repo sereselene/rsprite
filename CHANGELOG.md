@@ -2,7 +2,7 @@
 
 Everything notable that changes in rsprite lands here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
-## [0.1.2] - Unreleased
+## [0.1.2] - 2026-10-19
 
 ### Added
 
