@@ -265,4 +265,10 @@ You can also suggest tags or aliases with the suggestion form on [the issue trac
 
 ## Licence
 
-MIT. See the [licence](LICENSE).
+PolyForm Strict 1.0.0. See the [licence](https://github.com/sereselene/rsprite/blob/main/LICENSE).
+
+You can install rsprite and use it from your own plugins through the Plugin Hub dependency. You can't copy, change or republish the code, or build new works from it. It's for noncommercial use only: free plugins that accept donations are fine, paid or paywalled plugins are not.
+
+Using this code to train AI models, or as input to AI tools that produce derivative code, is not permitted.
+
+Versions up to and including 0.1.1 were released under the MIT licence.
