@@ -253,6 +253,19 @@ const textFiles = () =>
 
 const isMarkdown = (path) => extname(path).toLowerCase() === ".md";
 
+const LINE_LENGTH_EXEMPT_PATHS = new Set(["LICENSE"]);
+
+export const longLineProblems = (files) =>
+    files
+        .filter(({ path }) => !isMarkdown(path) && !LINE_LENGTH_EXEMPT_PATHS.has(path))
+        .flatMap(({ path, text }) =>
+            text
+                .split(/\r?\n/)
+                .map((line, position) => ({ line: position + 1, length: line.length }))
+                .filter(({ length }) => length > MAXIMUM_LINE_LENGTH)
+                .map(({ line, length }) => `${path}:${line} lines must be 200 characters or fewer, this one is ${length}`),
+        );
+
 const commentRuleFor = (path) => {
     const name = basename(path);
     const extension = extname(path).toLowerCase();
@@ -294,17 +307,8 @@ describe("standards across every tracked file", () => {
         assert.deepEqual(problems, []);
     });
 
-    test("no line outside Markdown is over 200 characters", () => {
-        const problems = files
-            .filter(({ path }) => !isMarkdown(path))
-            .flatMap(({ path, text }) =>
-                text
-                    .split(/\r?\n/)
-                    .map((line, position) => ({ line: position + 1, length: line.length }))
-                    .filter(({ length }) => length > MAXIMUM_LINE_LENGTH)
-                    .map(({ line, length }) => `${path}:${line} lines must be 200 characters or fewer, this one is ${length}`),
-            );
-        assert.deepEqual(problems, []);
+    test("no line outside Markdown and the root LICENSE is over 200 characters", () => {
+        assert.deepEqual(longLineProblems(files), []);
     });
 
     test("no script, workflow, action, Python or config file has a comment", () => {
@@ -342,6 +346,48 @@ describe("standards across every tracked file", () => {
                 }
             });
         assert.deepEqual(problems, []);
+    });
+});
+
+describe("line length exemptions", () => {
+    const longLine = "x".repeat(MAXIMUM_LINE_LENGTH + 1);
+    const shortLine = "x".repeat(MAXIMUM_LINE_LENGTH);
+
+    test("the root LICENSE is exempt by its exact path", () => {
+        assert.deepEqual(longLineProblems([{ path: "LICENSE", text: `${shortLine}\n${longLine}\n` }]), []);
+    });
+
+    test("a long line anywhere else outside Markdown is still reported", () => {
+        const problems = longLineProblems([
+            { path: "docs/LICENSE", text: `${longLine}\n` },
+            { path: "LICENSE.txt", text: `${longLine}\n` },
+            { path: "license", text: `${longLine}\n` },
+            { path: "scripts/example.mjs", text: `${shortLine}\n${longLine}\n` },
+            { path: ".github/workflows/example.yml", text: `${longLine}\n` },
+        ]);
+        assert.deepEqual(problems, [
+            "docs/LICENSE:1 lines must be 200 characters or fewer, this one is 201",
+            "LICENSE.txt:1 lines must be 200 characters or fewer, this one is 201",
+            "license:1 lines must be 200 characters or fewer, this one is 201",
+            "scripts/example.mjs:2 lines must be 200 characters or fewer, this one is 201",
+            ".github/workflows/example.yml:1 lines must be 200 characters or fewer, this one is 201",
+        ]);
+    });
+
+    test("Markdown stays exempt and a line of exactly 200 characters passes", () => {
+        assert.deepEqual(
+            longLineProblems([
+                { path: "README.md", text: `${longLine}\n` },
+                { path: "scripts/example.mjs", text: `${shortLine}\n` },
+            ]),
+            [],
+        );
+    });
+
+    test("the real LICENSE still has lines over 200 characters, so the exemption is what lets it pass", () => {
+        const licence = readFileSync(join(repositoryRoot, "LICENSE"), "latin1");
+        assert.ok(longLineProblems([{ path: "LICENSE.txt", text: licence }]).length > 0);
+        assert.deepEqual(longLineProblems([{ path: "LICENSE", text: licence }]), []);
     });
 });
 
