@@ -32,10 +32,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -46,7 +46,7 @@ jobs:
 
       - name: Restore the cached Luacheck install
         id: luacheck-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/.luarocks
           key: ${{ runner.os }}-${{ runner.arch }}-luarocks-luacheck-${{ env.LUACHECK_VERSION }}
@@ -107,7 +107,7 @@ jobs:
 
       - name: Keep the Lua checks summary for the comment job
         if: always() && github.event_name == 'pull_request'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: lua-checks-summary
           path: /tmp/lua-summary.md
@@ -132,7 +132,7 @@ jobs:
 
     steps:
       - name: Check out the comment action from the base branch
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           sparse-checkout: .github/actions
@@ -140,7 +140,7 @@ jobs:
 
       - name: Download the Lua checks summary
         continue-on-error: true
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
           name: lua-checks-summary
           path: ${{ runner.temp }}/lua-checks-summary
@@ -159,10 +159,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -181,10 +181,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version-file: .nvmrc
           cache: npm
