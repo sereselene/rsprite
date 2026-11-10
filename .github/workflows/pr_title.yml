@@ -66,10 +66,10 @@ jobs:
             echo ""
             echo "The PR title does not match the required format."
             echo ""
-            echo "Expected: \`type(scope): emoji description\`, optionally ending with \`#issue\`"
-            printf 'Example: \x60feat(core): \u2728 add a tag filter to Find\x60\n'
+            echo "Expected: \`type(scope): description\`, optionally ending with \`#issue\`"
+            printf 'Example: \x60feat(core): add a tag filter to Find\x60\n'
             echo ""
-            echo "Allowed types, scopes, and emoji are defined in \`.gitlint-rules/type_scope_format.py\`."
+            echo "Allowed types and scopes are defined in \`.gitlint-rules/type_scope_format.py\`."
             echo ""
             echo "Full gitlint output:"
             echo ""

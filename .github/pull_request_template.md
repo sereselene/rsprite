@@ -16,4 +16,4 @@
 - [ ] If anything in the `catalogue` folder changed, `npm run catalogue` was run
 - [ ] No generated file was edited by hand
 - [ ] If behaviour changed, `README.md` and `CHANGELOG.md` are updated
-- [ ] The pull request title follows `type(scope): emoji description`
+- [ ] The pull request title follows `type(scope): description`

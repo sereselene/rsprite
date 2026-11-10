@@ -26,20 +26,6 @@ scopes = [
     "ci",
 ]
 
-emoji_map = {
-    "feat": "\u2728",
-    "fix": "\U0001f41b",
-    "chore": "\U0001f9f9",
-    "docs": "\U0001f4dd",
-    "refactor": "\u267b\ufe0f",
-    "perf": "\u26a1",
-    "test": "\u2705",
-    "ci": "\U0001f477",
-    "build": "\U0001f4e6",
-    "style": "\U0001f3a8",
-    "init": "\U0001f389",
-}
-
 vague_words = [
     "stuff",
     "wip",
@@ -66,10 +52,9 @@ issue_trigger_words = [
 ]
 
 _TITLE_PATTERN = re.compile(
-    r"^(?P<type>{types})\((?P<scope>{scopes})\): (?P<emoji>{emojis}) (?P<description>.+?)(?: #(?P<issue>\d+))?$".format(
+    r"^(?P<type>{types})\((?P<scope>{scopes})\): (?P<description>.+?)(?: #(?P<issue>\d+))?$".format(
         types="|".join(re.escape(t) for t in types),
         scopes="|".join(re.escape(s) for s in scopes),
-        emojis="|".join(re.escape(e) for e in emoji_map.values()),
     )
 )
 
@@ -84,32 +69,25 @@ class TypeScopeFormat(CommitRule):
         violations = []
         title = commit.message.title
 
+        if not title.isascii():
+            violations.append(
+                RuleViolation(self.id, "Title must be plain ASCII, so it cannot contain an emoji")
+            )
+
         match = _TITLE_PATTERN.match(title)
         if not match:
             violations.append(
                 RuleViolation(
                     self.id,
-                    "Title must match 'type(scope): emoji description [#N]' using an "
-                    "allowed type, an allowed scope, and the emoji required for that "
-                    "type. Got: {0!r}".format(title),
+                    "Title must match 'type(scope): description [#N]' using an "
+                    "allowed type and an allowed scope. Got: {0!r}".format(title),
                 )
             )
             return violations
 
-        commit_type = match.group("type")
         scope = match.group("scope")
-        emoji = match.group("emoji")
         description = match.group("description")
         issue_number = match.group("issue")
-
-        if emoji_map.get(commit_type) != emoji:
-            violations.append(
-                RuleViolation(
-                    self.id,
-                    "Emoji {0!r} does not match the required emoji {1!r} for type "
-                    "'{2}'".format(emoji, emoji_map.get(commit_type), commit_type),
-                )
-            )
 
         if len(description) < min_description_length:
             violations.append(
