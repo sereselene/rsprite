@@ -54,5 +54,6 @@ The first release, built against client `950-1`.
   - A preview background that cycles through dark, light and a checkerboard.
   - Your search, tag, page, selection, preview settings, favourites and options are remembered between sessions.
 
+[0.1.2]: https://github.com/sereselene/rsprite/releases/tag/v0.1.2
 [0.1.1]: https://github.com/sereselene/rsprite/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sereselene/rsprite/releases/tag/v0.1.0

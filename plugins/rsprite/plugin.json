@@ -1,6 +1,13 @@
 {
   "name": "rsprite",
   "version": "0.1.2",
+  "author": "sereselene",
+  "repo": "https://github.com/sereselene/rsprite",
+  "contactEmailAddress": "hi@sereselene.dev",
   "requiredDependencies": {},
-  "optionalDependencies": {}
+  "optionalDependencies": {},
+  "requiredPermissions": [],
+  "optionalPermissions": [],
+  "hasRibbonIcon": false,
+  "hasSettingsIcon": false
 }
