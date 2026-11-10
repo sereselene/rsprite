@@ -14,8 +14,8 @@ updates:
         patterns:
           - "*"
     commit-message:
-      prefix: "build(tooling): \U0001F4E6"
-      prefix-development: "build(tooling): \U0001F4E6"
+      prefix: "build(tooling):"
+      prefix-development: "build(tooling):"
   - package-ecosystem: github-actions
     directories:
       - /
@@ -27,4 +27,4 @@ updates:
         patterns:
           - "*"
     commit-message:
-      prefix: "ci(ci): \U0001F477"
+      prefix: "ci(ci):"
