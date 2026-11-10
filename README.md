@@ -1,21 +1,26 @@
 # rsprite
 
-Name based sprite lookup, search and drawing for the RS3 plugin API.
+Find and draw RS3 game sprites by name in your own plugins.
 
 > **Status:** early development. Not yet on the Plugin Hub. Tested against game client `950-1`.
 
 ![The rsprite finder window, with a grid of sprite previews beside the details and copy boxes for the selected sprite](docs/images/finder.png)
 
-rsprite is a dependency free Lua library that resolves sprites by name, searches the full sprite catalogue, and draws sprites and item icons with consistent sizing, fallbacks and error handling. It works with or without PrettyUI.
+## What it does
 
-## Installation
+- **Sprites by name.** Ask for `SKILL_ATTACK` instead of remembering an id.
+- **Fallbacks.** Give a list of sprites and the first one that exists is drawn. If none exist, a grey placeholder is drawn instead of a blank gap.
+- **Item icons.** Draw any item icon from its item id.
+- **Search.** Search every sprite in the game by name, tag or alias.
+- **Crash safe.** Sprites known to crash the game client are never drawn.
 
-rsprite is not yet on the Plugin Hub and must be installed manually, using either:
+rsprite has no dependencies of its own and works with or without PrettyUI.
 
-- **A release:** unzip the `rsprite` zip from the [latest release](https://github.com/sereselene/rsprite/releases) into the client's development plugins folder.
-- **A clone:** copy `plugins/rsprite` into the same folder. This tracks `main` rather than a tested release.
+## Quick start
 
-Declare the dependency in your plugin's `plugin.json`:
+**1. Install.** Download the `rsprite` zip from the [latest release](https://github.com/sereselene/rsprite/releases) and unzip it into the client's development plugins folder.
+
+**2. Add the dependency** to your plugin's `plugin.json`:
 
 ```json
 {
@@ -25,16 +30,14 @@ Declare the dependency in your plugin's `plugin.json`:
 }
 ```
 
-In the game console, run `prf`, then `prl rsprite`, then load your plugin. The client exposes rsprite as the global `rsprite`, named after the dependency key, so no `require` is needed.
+**3. Load it.** In the game console, run `prf`, then `prl rsprite`, then load your plugin.
 
-Once rsprite is published, replace `"rsprite"` with its Plugin Hub id. The client then installs it automatically for players.
-
-## Example
+**4. Use it.** rsprite is ready to use as `rsprite`, with no `require` needed:
 
 ```lua
 local attackId = rsprite.Get("SKILL_ATTACK")
 
-local icon = rsprite.Draw(parent, { "SKILL_NECROMANCY", "BP3_MISSION_ICON_SKILL_NECROMANCY", Plugin.resources.my_icon }, {
+local icon = rsprite.Draw(parent, { "SKILL_NECROMANCY", "BP3_MISSION_ICON_SKILL_NECROMANCY" }, {
     x = 10,
     y = 10,
     size = 24,
@@ -43,99 +46,45 @@ local icon = rsprite.Draw(parent, { "SKILL_NECROMANCY", "BP3_MISSION_ICON_SKILL_
 local ring = rsprite.DrawItem(parent, 13562, { x = 40, y = 10, size = 24 })
 ```
 
-- `Get` resolves a name to an id, case insensitively.
-- `Draw` draws the first chain entry that exists. `SKILL_NECROMANCY` does not exist, so the mission icon is used. If no entry exists, a grey placeholder is drawn.
-- `DrawItem` draws an item icon by item id.
+- `Get` turns a name into an id.
+- `Draw` draws the first sprite in the list that exists. `SKILL_NECROMANCY` doesn't exist, so the mission icon is drawn.
+- `DrawItem` draws an item icon.
 
-## API
+Once rsprite is on the Plugin Hub, swap `"rsprite"` in step 2 for its Plugin Hub id, and players get it installed automatically.
 
-| Function | Description |
-| --- | --- |
-| `rsprite.version` | Library version, as `"X.Y.Z"`. |
-| `rsprite.Get(name)` | Sprite id for a name, or `nil`. Case insensitive and cached. |
-| `rsprite.Name(id)` | Sprite name for an id, or `nil`. Cached. |
-| `rsprite.Resolve(nameOrChain)` | First existing source in a chain and its position, or `nil`. |
-| `rsprite.Draw(parent, nameOrChain, options)` | Creates a `ui.Sprite` from the first existing source. Returns the sprite and the position used. |
-| `rsprite.SetSource(sprite, nameOrChain, options)` | Sets an existing sprite to a new chain, clearing any item icon set by rsprite. Returns the position used. |
-| `rsprite.DrawItem(parent, itemId, options)` | Creates a `ui.Sprite` showing an item icon. Returns the sprite. |
-| `rsprite.SetItem(sprite, itemId, options)` | Shows an item icon on an existing sprite. Returns `true` if an item is shown. |
-| `rsprite.Find(text, options)` | Searches names, tags and aliases. Returns the matching entries and the total match count. |
-| `rsprite.Tags()` | All filterable tags, sorted alphabetically. |
-| `rsprite.BuildIndex(onReady)` | Builds the search index over several ticks, then calls `onReady` with the sprite count. Calls it immediately if the index is ready. |
-| `rsprite.IsIndexReady()` | Whether the search index is ready. |
+## Good to know
 
-### Chains
+- Sprites are 24 by 24 unless you pass a `size`, or a `width` and `height`.
+- A fallback list can mix sprite names, sprite ids and your own images such as `Plugin.resources.my_icon`. It must not contain `nil`.
+- A missing sprite gives `nil` and logs one warning per name. A wrong argument raises an error at your own line.
+- Call `rsprite.BuildIndex()` at startup if you use search, so the first search doesn't have to build the index itself.
 
-`Draw`, `SetSource` and `Resolve` accept a single source or an ordered array of sources. Each entry may be a sprite name, a sprite id, or a plugin resource such as `Plugin.resources.my_icon`. The first existing entry is used.
-
-A `nil` entry terminates the array, so chains must not contain gaps. An empty chain, or one with no existing entry, draws the placeholder unless `placeholder = false` is passed.
-
-### Options
-
-| Option | Used by | Description |
-| --- | --- | --- |
-| `x`, `y` | `Draw`, `DrawItem` | Position within the parent, in interface units. Any finite number. Default 0. |
-| `xAnchor`, `yAnchor` | `Draw`, `DrawItem` | Reference point in the parent as a fraction of its width and height: 0 is the left or top edge, 0.5 the centre, 1 the right or bottom edge. Any finite number. Default 0. |
-| `size` | `Draw`, `DrawItem` | Width and height. Finite and above 0. Default 24. |
-| `width`, `height` | `Draw`, `DrawItem` | Individual dimensions, overriding `size`. Finite and above 0. |
-| `colour` | `Draw`, `SetSource` | Tint as a packed `0xRRGGBBAA` number. |
-| `alpha` | `Draw`, `SetSource` | Opacity from 0 to 1. |
-| `quantity` | `DrawItem`, `SetItem` | Stack count shown on the item. Whole number, 0 or above. |
-| `placeholder` | `Draw`, `SetSource`, `DrawItem`, `SetItem` | Whether to draw the placeholder when no source exists. Default `true`. |
-
-### Items
-
-- `nil` means no item. `DrawItem(parent, nil)` returns a hidden sprite, and `SetItem(sprite, nil)` clears and hides it and returns `false`. Neither warns or shows the placeholder.
-- Any other id that is not a whole number 0 or above logs one warning and shows the placeholder, unless `placeholder = false`.
-- A valid item id without an icon draws nothing.
-- `SetSource` and `SetItem` can switch a single sprite between an item icon and a sprite.
-
-### Search
-
-`Find(text, options)` matches each word against names, tags and aliases, ignoring case. Exact matches rank first, and curated sprites rank above others.
-
-Options are `tags` (tag names to filter by), `limit` (default 50) and `offset`. Each entry is `{ name, id, tags, aliases, width, height }`, with dimensions present only when known.
-
-An empty query lists every sprite, with `tags`, `limit` and `offset` still applied. The index is built on the first search; call `rsprite.BuildIndex()` at startup to spread that work over several ticks.
-
-### Errors and warnings
-
-- Missing sprites return `nil` and log one `rsprite:` warning per name.
-- Invalid arguments and options raise an error at the caller's line.
-- Runtime problems never raise.
-
-### Notes
-
-- Sprites are drawn at a fixed size, 24 by 24 by default. `Find` reports a sprite's native size when it is known.
-- Names are read from the running client, so they always match the current game build.
-- Sprites known to crash the game client are treated as missing.
-
-## Finder
-
-`rsprite-finder` is a separate development plugin for browsing sprites. It requires rsprite and PrettyUI, and must not be listed as a dependency.
-
-Install it from the same release, or copy `plugins/rsprite-finder` from a clone, then run `prl rsprite-finder`. Open it from the finder's settings cog in the Plugin Hub's Manage list, using **OPEN FINDER**.
-
-- Search by name, tag or alias, filter by tag, and star favourites.
-- Browse 30 previews per page, with full names on hover.
-- View a selected sprite at 16 to 64 px on a dark, light or checkerboard background, with its id, size, tags, aliases and numbered variants.
-- Copy its name, or a ready to paste `Get`, `Draw` or PrettyUI snippet.
-- Group numbered variants and hide mobile and language copies, both enabled by default in the settings cog.
-
-The finder remembers its state between sessions. If the client closes during a draw, the sprites being drawn are hidden and the finder reopens on page 1. **Show hidden sprites again** on the settings cog restores them.
+Every function and option is listed in the [API reference](docs/API.md).
 
 ## Using rsprite with PrettyUI
 
-rsprite supplies sprites to PrettyUI components rather than replacing them. Pass the result of `Resolve` to any component that accepts a sprite id or image, such as `Sprite`, `SimpleButton` or `BuffBar`:
+Pass the result of `Resolve` to any PrettyUI component that takes a sprite, such as `Sprite`, `SimpleButton` or `BuffBar`:
 
 ```lua
 local close = rsprite.Resolve({ "CLOSE_BUTTONS_0", Plugin.resources.close_fallback })
 prettyui.Sprite.new(parent, close, { size = 16 })
 ```
 
-## Contributing
+## Finder
 
-Suggest tags or aliases, report bugs, or report a sprite that crashes the game client, using the forms on the [issue tracker](https://github.com/sereselene/rsprite/issues).
+`rsprite-finder` is a separate tool for browsing every sprite while you build. It needs rsprite and PrettyUI. It's for your own use, so don't list it as a dependency.
+
+Install it from the same release, run `prl rsprite-finder`, then open it from its settings cog in the Plugin Hub's Manage list with **OPEN FINDER**.
+
+- Search by name, tag or alias, filter by tag, and star favourites.
+- Preview any sprite at 16 to 64 px on a dark, light or checkerboard background.
+- Copy its name, or a ready to paste `Get`, `Draw` or PrettyUI snippet.
+
+If the game closes while the finder is drawing, those sprites are hidden next time. **Show hidden sprites again** on the settings cog brings them back.
+
+## Feedback
+
+Report a bug, a sprite that crashes the game client, or suggest a tag or alias on the [issue tracker](https://github.com/sereselene/rsprite/issues).
 
 ## Licence
 
