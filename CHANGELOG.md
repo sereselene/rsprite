@@ -2,6 +2,13 @@
 
 Everything notable that changes in rsprite lands here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+
+## [0.1.3] - 2026-11-13
+
+### Fixed
+
+- `plugin.json` no longer includes the `author` and `repo` fields, which the Plugin Hub does not support.
+
 ## [0.1.2] - 2026-10-19
 
 ### Added
@@ -54,6 +61,7 @@ The first release, built against client `950-1`.
   - A preview background that cycles through dark, light and a checkerboard.
   - Your search, tag, page, selection, preview settings, favourites and options are remembered between sessions.
 
+[0.1.3]: https://github.com/sereselene/rsprite/releases/tag/v0.1.3
 [0.1.2]: https://github.com/sereselene/rsprite/releases/tag/v0.1.2
 [0.1.1]: https://github.com/sereselene/rsprite/releases/tag/v0.1.1
 [0.1.0]: https://github.com/sereselene/rsprite/releases/tag/v0.1.0
